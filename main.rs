@@ -79,14 +79,36 @@ impl Chip8System {
         self.v_regs[((opcode >> 8) & 0xF) as usize]
     }
 
+    fn get_vy(&self, opcode: u16) -> u8 {
+        self.v_regs[((opcode >> 4) & 0xF) as usize]
+    }
+
     fn set_vx(&mut self, opcode: u16, value: u8) {
         self.v_regs[((opcode >> 8) & 0xF) as usize] = value;
+    }
+
+    fn panic_unknown(&self, opcode: u16) {
+        panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2);
     }
 
     fn do_opcode(&mut self) {
         let opcode = self.fetch();
 
         match opcode >> 12 {
+            0x0 => {
+                match opcode & 0xFF {
+                    0xE0 => {
+                        for p in self.screen.iter_mut() {
+                            *p = false;
+                        }
+                    }
+                    0xEE => {
+                        self.pc = self.stack[self.stack_ptr as usize];
+                        self.stack_ptr -= 1;
+                    }
+                    _ => self.panic_unknown(opcode),
+                }
+            }
             0x1 => self.pc = op_to_nnn(opcode),
             0x2 => {
                 self.stack_ptr += 1;
@@ -103,11 +125,17 @@ impl Chip8System {
                 let cur = self.get_vx(opcode);
                 self.set_vx(opcode, cur + op_to_kk(opcode));
             }
+            0x8 => {
+                let x = self.get_vx(opcode);
+                let y = self.get_vy(opcode);
+                self.set_vx(opcode, x & y);
+            }
             0xA => self.i_reg = opcode & 0xFFF,
             0xD => println!("FIXME: draw sprite!"),
+            0xE => println!("FIXME: Skip if key pressed!"),
             0xF => println!("FIXME: delay timer!"),
             
-            _ => panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2),
+            _ => self.panic_unknown(opcode),
         }
     }
 }
