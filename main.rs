@@ -37,6 +37,29 @@ impl Chip8System {
         }
     }
 
+    fn dump(&self) {
+        println!("----- Chip8 State -----");
+        println!("PC: 0x{:04x} I: 0x{:04x}", self.pc, self.i_reg);
+        print!("Delay Timer: {} Sound Timer: {}", self.delay_timer, self.sound_timer);
+        for (i, v) in self.v_regs.iter().enumerate() {
+            if i % 8 == 0 {
+                println!();
+            }
+            print!("V{:02}: 0x{:02x} ", i, *v);
+        }
+        println!();
+        println!("Stack:");
+        for (i, addr) in self.stack.iter().enumerate() {
+            print!("{:02}: 0x{:04x}", i, *addr);
+            
+            if i == (self.stack_ptr as usize) {
+                println!(" <<<");
+            } else {
+                println!();
+            }
+        }
+    }
+
     fn init_memory(&mut self, rom_name: String) {
         let font_data = [
                         0xF0, 0x90, 0x90, 0x90, 0xF0,  // Zero
@@ -92,6 +115,7 @@ impl Chip8System {
     }
 
     fn do_opcode(&mut self) {
+        self.dump();
         let opcode = self.fetch();
 
         match opcode >> 12 {
