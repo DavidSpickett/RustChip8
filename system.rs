@@ -169,3 +169,30 @@ impl Chip8System {
         }
     }
 }
+
+trait Instr {
+    fn repr(&self) -> String;
+    fn exec(mut C8: Chip8System);
+}
+
+struct call_instr {
+    opcode: u16,
+    target: u16,
+}
+
+impl call_instr {
+    fn new(opc: u16) -> call_instr {
+        call_instr {
+            opcode: opc,
+            target: opc & 0xFFF,
+        }
+    }
+}
+
+impl Instr for call_instr {
+    fn repr(&self) -> String {
+        format!("CALL 0x{:03x}", self.target)
+    }
+
+    fn exec(mut C8: Chip8System) {}
+}
