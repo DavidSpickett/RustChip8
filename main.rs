@@ -2,9 +2,18 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::error::Error;
 
+fn op_to_kk(opcode: u16) -> u8 {
+    (opcode & 0xFF) as u8
+}
+
+fn op_to_nnn(opcode: u16) -> u16 {
+    opcode & 0xFFF
+}
+
 struct Chip8System {
     pc : u16,
     memory : [u8 ; 0xFFFF],
+    screen : [bool ; 64*32],
     v_regs : [u8 ; 16],
     i_reg : u16,
     stack : [u16 ; 16],
@@ -18,6 +27,7 @@ impl Chip8System {
         Chip8System {
             pc: 0x200,
             memory: [0; 0xFFFF],
+            screen: [false; 64*32],
             v_regs: [0; 16],
             i_reg: 0,
             stack: [0; 16],
@@ -65,12 +75,38 @@ impl Chip8System {
         return opcode
     }
 
+    fn get_vx(&self, opcode: u16) -> u8 {
+        self.v_regs[((opcode >> 8) & 0xF) as usize]
+    }
+
+    fn set_vx(&mut self, opcode: u16, value: u8) {
+        self.v_regs[((opcode >> 8) & 0xF) as usize] = value;
+    }
+
     fn do_opcode(&mut self) {
         let opcode = self.fetch();
 
         match opcode >> 12 {
-            1 => panic!("Do a jump!"), 
-            2 => panic!("Do a call!"), 
+            0x1 => self.pc = op_to_nnn(opcode),
+            0x2 => {
+                self.stack_ptr += 1;
+                self.stack[self.stack_ptr as usize] = self.pc;
+                self.pc = op_to_nnn(opcode);
+            }
+            0x3 => {
+                if self.get_vx(opcode) == op_to_kk(opcode) {
+                    self.pc += 2;
+                }
+            }
+            0x6 => self.set_vx(opcode, op_to_kk(opcode)), 
+            0x7 => {
+                let cur = self.get_vx(opcode);
+                self.set_vx(opcode, cur + op_to_kk(opcode));
+            }
+            0xA => self.i_reg = opcode & 0xFFF,
+            0xD => println!("FIXME: draw sprite!"),
+            0xF => println!("FIXME: delay timer!"),
+            
             _ => panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2),
         }
     }
@@ -80,7 +116,7 @@ fn main() {
     let mut c8 = Chip8System::new();
     c8.init_memory(String::from("INVADERS"));
 
-    while true {
+    loop {
         c8.do_opcode();
     }
 }
