@@ -152,6 +152,8 @@ impl Chip8System {
             0xF => {
                 match opcode & 0xF0FF {
                     0xF01E => Box::new(add_iv_instr::new(opcode)) as Box<Instr>, 
+                    0xF015 => Box::new(set_delay_timer_instr::new(opcode)) as Box<Instr>,
+                    0xF007 => Box::new(get_delay_timer_instr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
@@ -454,5 +456,53 @@ impl Instr for add_iv_instr {
 
     fn exec(&self, C8: &mut Chip8System) {
         C8.i_reg += C8.v_regs[self.vx as usize] as u16
+    }
+}
+
+struct set_delay_timer_instr {
+    opcode: u16,
+    vx: u8,
+}
+
+impl set_delay_timer_instr {
+    fn new(opc: u16) -> set_delay_timer_instr {
+        set_delay_timer_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for set_delay_timer_instr {
+    fn repr(&self) -> String {
+        format!("LD DT, V{}", self.vx)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.delay_timer = C8.v_regs[self.vx as usize]
+    }
+}
+
+struct get_delay_timer_instr {
+    opcode: u16,
+    vx: u8,
+}
+
+impl get_delay_timer_instr {
+    fn new(opc: u16) -> get_delay_timer_instr {
+        get_delay_timer_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for get_delay_timer_instr {
+    fn repr(&self) -> String {
+        format!("LD V{}, DT", self.vx)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.v_regs[self.vx as usize] = C8.delay_timer
     }
 }
