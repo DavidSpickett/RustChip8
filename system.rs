@@ -133,51 +133,46 @@ impl Chip8System {
             0x0 => {
                 match opcode & 0xFF {
                     0xE0 => Box::new(clear_display_instr::new(opcode)) as Box<Instr>,
-                    _ => panic!("Unknown instr!"),
+                    0xEE => Box::new(ret_instr::new(opcode)) as Box<Instr>,
+                    _ => {
+                        self.panic_unknown(opcode);
+                        panic!("");
+                    }
                 }
             }
             0x1 => Box::new(jump_instr::new(opcode)) as Box<Instr>,
             0x2 => Box::new(call_instr::new(opcode)) as Box<Instr>,
             0x3 => Box::new(skip_equal_instr::new(opcode)) as Box<Instr>,
             0x6 => Box::new(load_byte_instr::new(opcode)) as Box<Instr>,
+            0x7 => Box::new(add_byte_instr::new(opcode)) as Box<Instr>,
             0x8 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
-            0xD => panic!("FIXME: draw sprite!"),
-            0xE => panic!("FIXME: Skip if key pressed!"),
-            0xF => panic!("FIXME: delay timer!"),
+            0xA => Box::new(load_i_instr::new(opcode)) as Box<Instr>,
+            0xD => Box::new(undef_instr::new(opcode, String::from("FIXME: draw sprite!"))),
+            0xE => Box::new(undef_instr::new(opcode, String::from("FIXME: Skip if key pressed!"))),
+            0xF => {
+                match opcode & 0xF0FF {
+                    0xF01E => Box::new(add_iv_instr::new(opcode)) as Box<Instr>, 
+                    _ => {
+                        self.panic_unknown(opcode);
+                        panic!("");
+                    }
+                }
+            }
             _ => {
                 self.panic_unknown(opcode);
-                panic!("<< so it knows this won't return");
+                panic!("");
             }
         }
     }
 
     pub fn do_opcode(&mut self) {
-        self.dump();
         let opc = self.fetch();
         let opcode = self.get_opcode_obj(opc);
-        println!("{}", opcode.repr());
+        // -2 since we already fetched
+        println!("0x{:04x} : 0x{:04x} : {}", self.pc-2, opc, opcode.repr());
         opcode.exec(self);
-
-        /*match opcode >> 12 {
-            0x0 => {
-                match opcode & 0xFF {
-                    0xEE => {
-                        self.pc = self.stack[self.stack_ptr as usize];
-                        self.stack_ptr -= 1;
-                    }
-                }
-            }
-            0x7 => {
-                let cur = self.get_vx(opcode);
-                self.set_vx(opcode, cur + op_to_kk(opcode));
-            }
-            0x8 => {
-                let x = self.get_vx(opcode);
-                let y = self.get_vy(opcode);
-                self.set_vx(opcode, x & y);
-            }
-            0xA => self.i_reg = opcode & 0xFFF,
-        }*/
+        self.dump();
+        println!();
     }
 }
 
@@ -187,6 +182,28 @@ trait Instr {
     fn repr(&self) -> String;
     fn exec(&self, C8: &mut Chip8System);
     //fn construct() -> instr; //because writing an assembler is too hard
+}
+
+struct undef_instr {
+    opcode: u16,
+    message: String,
+}
+
+impl undef_instr {
+    fn new(opc: u16, msg: String) -> undef_instr {
+        undef_instr {
+            opcode: opc,
+            message: msg,
+        }
+    }
+}
+
+impl Instr for undef_instr {
+    fn repr(&self) -> String {
+        format!("{}", self.message) 
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {}
 }
 
 struct call_instr {
@@ -236,6 +253,29 @@ impl Instr for jump_instr {
 
     fn exec(&self, C8: &mut Chip8System) {
         C8.pc = self.target;
+    }
+}
+
+struct ret_instr {
+    opcode: u16,
+}
+
+impl ret_instr {
+    fn new(opc: u16) -> ret_instr {
+        ret_instr {
+            opcode: opc,
+        }
+    }
+}
+
+impl Instr for ret_instr {
+    fn repr(&self) -> String {
+        format!("RET")
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.pc = C8.stack[C8.stack_ptr as usize];
+        C8.stack_ptr -= 1;
     }
 }
 
@@ -340,5 +380,79 @@ impl Instr for mov_reg_instr {
 
     fn exec(&self, C8: &mut Chip8System) {
         C8.v_regs[self.vx as usize] = C8.v_regs[self.vy as usize];
+    }
+}
+
+struct load_i_instr {
+    opcode: u16,
+    nnn: u16,
+}
+
+impl load_i_instr {
+    fn new(opc: u16) -> load_i_instr {
+        load_i_instr {
+            opcode: opc,
+            nnn: op_to_nnn(opc),
+        }
+    }
+}
+
+impl Instr for load_i_instr {
+    fn repr(&self) -> String {
+        format!("LD I, 0x{:03x}", self.nnn)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.i_reg = self.nnn;
+    }
+}
+
+struct add_byte_instr {
+    opcode: u16,
+    vx: u8,
+    kk: u8,
+}
+
+impl add_byte_instr {
+    fn new(opc: u16) -> add_byte_instr {
+        add_byte_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+            kk: op_to_kk(opc),
+        }
+    }
+}
+
+impl Instr for add_byte_instr {
+    fn repr(&self) -> String {
+        format!("ADD V{}, 0x{:02x}", self.vx, self.kk)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.v_regs[self.vx as usize] = C8.v_regs[self.vx as usize].wrapping_add(self.kk)
+    }
+}
+
+struct add_iv_instr {
+    opcode: u16,
+    vx: u8,
+}
+
+impl add_iv_instr {
+    fn new(opc: u16) -> add_iv_instr {
+        add_iv_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for add_iv_instr {
+    fn repr(&self) -> String {
+        format!("ADD I, V{}", self.vx)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.i_reg += C8.v_regs[self.vx as usize] as u16
     }
 }
