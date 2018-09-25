@@ -16,6 +16,14 @@ fn op_to_nnn(opcode: u16) -> u16 {
     opcode & 0xFFF
 }
 
+fn op_to_vx(opcode: u16) -> u8 {
+    ((opcode >> 8) & 0xf) as u8
+}
+
+fn op_to_vy(opcode: u16) -> u8 {
+    ((opcode >> 4) & 0xF) as u8
+}
+
 pub struct Chip8System {
     pc : u16,
     memory : [u8 ; 0xFFFF],
@@ -120,37 +128,45 @@ impl Chip8System {
         panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2);
     }
 
-    pub fn do_opcode(&mut self) {
-        self.dump();
-        let opcode = self.fetch();
-
+    fn get_opcode_obj(&self, opcode: u16) -> Box<Instr>{
         match opcode >> 12 {
             0x0 => {
                 match opcode & 0xFF {
-                    0xE0 => {
-                        for p in self.screen.iter_mut() {
-                            *p = false;
-                        }
-                    }
+                    0xE0 => Box::new(clear_display_instr::new(opcode)) as Box<Instr>,
+                    _ => panic!("Unknown instr!"),
+                }
+            }
+            0x1 => Box::new(jump_instr::new(opcode)) as Box<Instr>,
+            0x2 => Box::new(call_instr::new(opcode)) as Box<Instr>,
+            0x3 => Box::new(skip_equal_instr::new(opcode)) as Box<Instr>,
+            0x6 => Box::new(load_byte_instr::new(opcode)) as Box<Instr>,
+            0x8 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
+            0xD => panic!("FIXME: draw sprite!"),
+            0xE => panic!("FIXME: Skip if key pressed!"),
+            0xF => panic!("FIXME: delay timer!"),
+            _ => {
+                self.panic_unknown(opcode);
+                panic!("<< so it knows this won't return");
+            }
+        }
+    }
+
+    pub fn do_opcode(&mut self) {
+        self.dump();
+        let opc = self.fetch();
+        let opcode = self.get_opcode_obj(opc);
+        println!("{}", opcode.repr());
+        opcode.exec(self);
+
+        /*match opcode >> 12 {
+            0x0 => {
+                match opcode & 0xFF {
                     0xEE => {
                         self.pc = self.stack[self.stack_ptr as usize];
                         self.stack_ptr -= 1;
                     }
-                    _ => self.panic_unknown(opcode),
                 }
             }
-            0x1 => self.pc = op_to_nnn(opcode),
-            0x2 => {
-                self.stack_ptr += 1;
-                self.stack[self.stack_ptr as usize] = self.pc;
-                self.pc = op_to_nnn(opcode);
-            }
-            0x3 => {
-                if self.get_vx(opcode) == op_to_kk(opcode) {
-                    self.pc += 2;
-                }
-            }
-            0x6 => self.set_vx(opcode, op_to_kk(opcode)), 
             0x7 => {
                 let cur = self.get_vx(opcode);
                 self.set_vx(opcode, cur + op_to_kk(opcode));
@@ -161,18 +177,16 @@ impl Chip8System {
                 self.set_vx(opcode, x & y);
             }
             0xA => self.i_reg = opcode & 0xFFF,
-            0xD => println!("FIXME: draw sprite!"),
-            0xE => println!("FIXME: Skip if key pressed!"),
-            0xF => println!("FIXME: delay timer!"),
-            
-            _ => self.panic_unknown(opcode),
-        }
+        }*/
     }
 }
 
+
+
 trait Instr {
     fn repr(&self) -> String;
-    fn exec(mut C8: Chip8System);
+    fn exec(&self, C8: &mut Chip8System);
+    //fn construct() -> instr; //because writing an assembler is too hard
 }
 
 struct call_instr {
@@ -194,5 +208,137 @@ impl Instr for call_instr {
         format!("CALL 0x{:03x}", self.target)
     }
 
-    fn exec(mut C8: Chip8System) {}
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.stack_ptr += 1;
+        C8.stack[C8.stack_ptr as usize] = C8.pc;
+        C8.pc = op_to_nnn(self.opcode);
+    }
+}
+
+struct jump_instr {
+    opcode: u16,
+    target: u16,
+}
+
+impl jump_instr {
+    fn new(opc: u16) -> jump_instr {
+        jump_instr {
+            opcode: opc,
+            target: op_to_nnn(opc),
+        }
+    }
+}
+
+impl Instr for jump_instr {
+    fn repr(&self) -> String {
+        format!("JP 0x{:03x}", self.target)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.pc = self.target;
+    }
+}
+
+struct skip_equal_instr {
+    opcode: u16,
+    vx: u8,
+    kk: u8,
+}
+
+impl skip_equal_instr {
+    fn new(opc: u16) -> skip_equal_instr {
+        skip_equal_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+            kk: op_to_kk(opc),
+        }
+    }
+}
+
+impl Instr for skip_equal_instr {
+    fn repr(&self) -> String {
+        format!("SE V{}, 0x{:02x}", self.vx, self.kk)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        if C8.v_regs[self.vx as usize] == self.kk {
+            C8.pc += 2;
+        }
+    }
+}
+
+struct load_byte_instr {
+    opcode: u16,
+    vx: u8,
+    kk: u8,
+}
+
+impl load_byte_instr {
+    fn new(opc: u16) -> load_byte_instr {
+        load_byte_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+            kk: op_to_kk(opc),
+        }
+    }
+}
+
+impl Instr for load_byte_instr {
+    fn repr(&self) -> String {
+        format!("LD V{}, 0x{:02x}", self.vx, self.kk)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.v_regs[self.vx as usize] = self.kk;
+    }
+}
+
+struct clear_display_instr {
+    opcode: u16,
+}
+
+impl clear_display_instr {
+    fn new(opc: u16) -> clear_display_instr {
+        clear_display_instr {
+            opcode: opc
+        }
+    }
+}
+
+impl Instr for clear_display_instr {
+    fn repr(&self) -> String {
+        String::from("CLS")
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        for p in C8.screen.iter_mut() {
+            *p = false;
+        }
+    }
+}
+
+struct mov_reg_instr {
+    opcode: u16,
+    vx: u8,
+    vy: u8,
+}
+
+impl mov_reg_instr {
+    fn new(opc: u16) -> mov_reg_instr {
+        mov_reg_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for mov_reg_instr {
+    fn repr(&self) -> String {
+        format!("LD V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        C8.v_regs[self.vx as usize] = C8.v_regs[self.vy as usize];
+    }
 }
