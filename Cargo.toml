@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["David Spickett"]
 
 [dependencies]
+sdl2 = "0.31"
 
 [[bin]]
 name = "RChip8"

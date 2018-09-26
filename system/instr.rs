@@ -342,3 +342,54 @@ impl Instr for get_delay_timer_instr {
         C8.v_regs[self.vx as usize] = C8.delay_timer
     }
 }
+
+pub struct draw_sprite_instr {
+    opcode: u16,
+    vx: u8,
+    vy: u8,
+    n: u8,
+}
+
+impl draw_sprite_instr {
+    pub fn new(opc: u16) -> draw_sprite_instr {
+        draw_sprite_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+            n: (opc & 0xF) as u8,
+        }
+    }
+}
+
+impl Instr for draw_sprite_instr {
+    fn repr(&self) -> String {
+        format!("DRW V{}, V{}, {}", self.vx, self.vy, self.n)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        //Clear overlap flag
+        C8.v_regs[15] = 0;
+
+        let x = C8.v_regs[self.vx as usize];
+        let y = C8.v_regs[self.vy as usize];
+        let addr = C8.i_reg as usize;
+        let sprite_data = &C8.memory[addr..addr+(self.n as usize)];
+
+        for (y_offset, row) in sprite_data.iter().enumerate() {
+            println!("0b{:08b}", *row);
+            for sprite_x in (0..8).rev() {
+                let final_x = ((x+7-sprite_x) % 64) as usize;
+                let final_y = ((y as usize) + y_offset) % 32;
+                let screen_idx = (final_y*64)+final_x;
+
+                let pixel_set = *row & (1 << sprite_x) != 0; 
+                let pixel_was = C8.screen[screen_idx];
+                 
+                if pixel_set && pixel_was {
+                    C8.v_regs[15] = 1;
+                }
+                C8.screen[screen_idx] ^= pixel_set;
+            }
+        }
+    }
+}

@@ -12,7 +12,7 @@ pub fn make_system(rom_name: String) -> Chip8System {
 pub struct Chip8System {
     pc : u16,
     memory : [u8 ; 0xFFFF],
-    screen : [bool ; 64*32],
+    pub screen : [bool ; 64*32],
     v_regs : [u8 ; 16],
     i_reg : u16,
     stack : [u16 ; 16],
@@ -132,7 +132,7 @@ impl Chip8System {
             0x7 => Box::new(add_byte_instr::new(opcode)) as Box<Instr>,
             0x8 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
             0xA => Box::new(load_i_instr::new(opcode)) as Box<Instr>,
-            0xD => Box::new(undef_instr::new(opcode, String::from("FIXME: draw sprite!"))),
+            0xD => Box::new(draw_sprite_instr::new(opcode)) as Box<Instr>,
             0xE => Box::new(undef_instr::new(opcode, String::from("FIXME: Skip if key pressed!"))),
             0xF => {
                 match opcode & 0xF0FF {
