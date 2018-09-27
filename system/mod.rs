@@ -2,6 +2,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
+use sdl2::keyboard::KeyboardState;
+use sdl2::keyboard::Scancode;
 
 pub fn make_system(rom_name: String) -> Chip8System {
     let mut c = Chip8System::new();
@@ -13,6 +15,7 @@ pub struct Chip8System {
     pc : u16,
     memory : [u8 ; 0xFFFF],
     pub screen : [bool ; 64*32],
+    pub keys : [bool ; 16],
     v_regs : [u8 ; 16],
     i_reg : u16,
     stack : [u16 ; 16],
@@ -27,12 +30,25 @@ impl Chip8System {
             pc: 0x200,
             memory: [0; 0xFFFF],
             screen: [false; 64*32],
+            keys: [false; 16],
             v_regs: [0; 16],
             i_reg: 0,
             stack: [0; 16],
             stack_ptr: 0,
             delay_timer: 0,
             sound_timer: 0,
+        }
+    }
+
+    pub fn update_keys(&mut self, key_state: KeyboardState) {
+        let chip8_keys = [
+           Scancode::Num1, Scancode::Num2, Scancode::Num3, Scancode::Num4,
+           Scancode::Q,    Scancode::W,    Scancode::E,    Scancode::R,
+           Scancode::A,    Scancode::S,    Scancode::D,    Scancode::F,
+           Scancode::Z,    Scancode::X,    Scancode::C,    Scancode::V,
+        ];
+        for (scancode, chip8key) in chip8_keys.iter().zip(self.keys.iter_mut()) {
+            *chip8key = key_state.is_scancode_pressed(*scancode);
         }
     }
 
@@ -133,7 +149,16 @@ impl Chip8System {
             0x8 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
             0xA => Box::new(load_i_instr::new(opcode)) as Box<Instr>,
             0xD => Box::new(draw_sprite_instr::new(opcode)) as Box<Instr>,
-            0xE => Box::new(undef_instr::new(opcode, String::from("FIXME: Skip if key pressed!"))),
+            0xE => {
+                match opcode & 0xFF {
+                    0x9E => Box::new(skip_key_if_pressed_instr::new(opcode)) as Box<Instr>,
+                    0xA1 => Box::new(skip_key_if_not_pressed_instr::new(opcode)) as Box<Instr>,
+                    _ => {
+                        self.panic_unknown(opcode);
+                        panic!("");
+                    }
+                }
+            }
             0xF => {
                 match opcode & 0xF0FF {
                     0xF01E => Box::new(add_iv_instr::new(opcode)) as Box<Instr>, 

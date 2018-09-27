@@ -393,3 +393,57 @@ impl Instr for draw_sprite_instr {
         }
     }
 }
+
+pub struct skip_key_if_pressed_instr {
+    opcode: u16,
+    vx: u8,
+}
+
+impl skip_key_if_pressed_instr {
+    pub fn new(opc: u16) -> skip_key_if_pressed_instr {
+        skip_key_if_pressed_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for skip_key_if_pressed_instr {
+    fn repr(&self) -> String {
+        format!("SKP V{}", self.vx)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        let key_num = C8.v_regs[self.vx as usize] as usize;
+        if C8.keys[key_num] {
+            C8.pc += 2;
+        }
+    }
+}
+
+pub struct skip_key_if_not_pressed_instr {
+    opcode: u16,
+    vx: u8,
+}
+
+impl skip_key_if_not_pressed_instr {
+    pub fn new(opc: u16) -> skip_key_if_not_pressed_instr {
+        skip_key_if_not_pressed_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for skip_key_if_not_pressed_instr {
+    fn repr(&self) -> String {
+        format!("SKNP V{}", self.vx)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        let key_num = C8.v_regs[self.vx as usize] as usize;
+        if !C8.keys[key_num] {
+            C8.pc += 2;
+        }
+    }
+}

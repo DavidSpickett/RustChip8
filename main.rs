@@ -36,7 +36,8 @@ pub fn main() {
             }
         }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-        
+ 
+        c8.update_keys(event_pump.keyboard_state());
         c8.do_opcode();
         
         canvas.set_draw_color(Color::RGB(0, 0, 0));
