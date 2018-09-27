@@ -144,10 +144,31 @@ impl Chip8System {
             0x1 => Box::new(jump_instr::new(opcode)) as Box<Instr>,
             0x2 => Box::new(call_instr::new(opcode)) as Box<Instr>,
             0x3 => Box::new(skip_equal_instr::new(opcode)) as Box<Instr>,
+            0x4 => Box::new(skip_not_equal_instr::new(opcode)) as Box<Instr>,
+          //0x5 =>
             0x6 => Box::new(load_byte_instr::new(opcode)) as Box<Instr>,
             0x7 => Box::new(add_byte_instr::new(opcode)) as Box<Instr>,
-            0x8 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
+            0x8 => {
+                match opcode & 0xF00F {
+                    0x8000 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
+                    //0x8001 =>
+                    //0x8002 =>
+                    //0x8003 =>
+                    //0x8004 =>
+                    //0x8005 =>
+                    //0x8006 =>
+                    //0x8006 =>
+                    //0x800E =>
+                    _ => {
+                        self.panic_unknown(opcode);
+                        panic!("");
+                    }
+                }
+            }
+          //0x9 =>
             0xA => Box::new(load_i_instr::new(opcode)) as Box<Instr>,
+          //0xB =>
+          //0xC =>
             0xD => Box::new(draw_sprite_instr::new(opcode)) as Box<Instr>,
             0xE => {
                 match opcode & 0xFF {
@@ -161,9 +182,15 @@ impl Chip8System {
             }
             0xF => {
                 match opcode & 0xF0FF {
-                    0xF01E => Box::new(add_iv_instr::new(opcode)) as Box<Instr>, 
-                    0xF015 => Box::new(set_delay_timer_instr::new(opcode)) as Box<Instr>,
                     0xF007 => Box::new(get_delay_timer_instr::new(opcode)) as Box<Instr>,
+                    //0xF00A
+                    0xF015 => Box::new(set_delay_timer_instr::new(opcode)) as Box<Instr>,
+                    //0xF018
+                    0xF01E => Box::new(add_iv_instr::new(opcode)) as Box<Instr>, 
+                    //0xF029
+                    //0xF033
+                    //0xF055
+                    0xF065 => Box::new(read_regs_from_mem_instr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
@@ -183,8 +210,8 @@ impl Chip8System {
         // -2 since we already fetched
         println!("0x{:04x} : 0x{:04x} : {}", self.pc-2, opc, opcode.repr());
         opcode.exec(self);
-        self.dump();
-        println!();
+        //self.dump();
+        //println!();
     }
 }
 

@@ -145,6 +145,34 @@ impl Instr for skip_equal_instr {
     }
 }
 
+pub struct skip_not_equal_instr {
+    opcode: u16,
+    vx: u8,
+    kk: u8,
+}
+
+impl skip_not_equal_instr {
+    pub fn new(opc: u16) -> skip_not_equal_instr {
+        skip_not_equal_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+            kk: op_to_kk(opc),
+        }
+    }
+}
+
+impl Instr for skip_not_equal_instr {
+    fn repr(&self) -> String {
+        format!("SNE V{}, 0x{:02x}", self.vx, self.kk)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        if C8.v_regs[self.vx as usize] != self.kk {
+            C8.pc +=2;
+        }
+    }
+}
+
 pub struct load_byte_instr {
     opcode: u16,
     vx: u8,
@@ -376,7 +404,6 @@ impl Instr for draw_sprite_instr {
         let sprite_data = &C8.memory[addr..addr+(self.n as usize)];
 
         for (y_offset, row) in sprite_data.iter().enumerate() {
-            println!("0b{:08b}", *row);
             for sprite_x in (0..8).rev() {
                 let final_x = ((x+7-sprite_x) % 64) as usize;
                 let final_y = ((y as usize) + y_offset) % 32;
@@ -444,6 +471,33 @@ impl Instr for skip_key_if_not_pressed_instr {
         let key_num = C8.v_regs[self.vx as usize] as usize;
         if !C8.keys[key_num] {
             C8.pc += 2;
+        }
+    }
+}
+
+pub struct read_regs_from_mem_instr {
+    opcode: u16,
+    vx: u8,
+}
+
+impl read_regs_from_mem_instr {
+    pub fn new(opc: u16) -> read_regs_from_mem_instr {
+        read_regs_from_mem_instr {
+            opcode: opc,
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for read_regs_from_mem_instr {
+    fn repr(&self) -> String {
+        format!("LD V{}, [I]", self.vx)
+    }
+
+    fn exec(&self, C8: &mut Chip8System) {
+        let addr = C8.i_reg as usize;
+        for reg_idx in 0..(self.vx+1) {
+            C8.v_regs[reg_idx as usize] = C8.memory[addr];
         }
     }
 }
