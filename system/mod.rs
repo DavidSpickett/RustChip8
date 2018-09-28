@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::path::Path;
 use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
@@ -37,6 +38,27 @@ impl Chip8System {
             stack_ptr: 0,
             delay_timer: 0,
             sound_timer: 0,
+        }
+    }
+
+    pub fn screen_to_file(&self) {
+        let path = Path::new("screen.txt");
+        let mut file = match File::create(&path) {
+            Err(why) => panic!("Couldn't create screen dump!: {}", why.description()),
+            Ok(file) => file,
+        };
+
+        let mut row = String::from("");
+        for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
+            if ((i % 64) == 0) &&  i != 0 { // TODO: make the screen a 2d array?
+                row.push('\n');
+                file.write(row.as_bytes());
+                row.clear();
+            }
+            match *pixel {
+                true => row.push('*'),
+                false => row.push(' '),
+            }
         }
     }
 

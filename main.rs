@@ -26,11 +26,20 @@ pub fn main() {
 
     let mut c8 = system::make_system(String::from("INVADERS"));
 
+    /*TODO: Hammer the instruction encodings!
+    for opcode in 0..0xFFFF {
+    }*/
+
+    let mut instr_count = 0;
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
+                },
+                Event::KeyDown { keycode: Some(Keycode::Tab), ..} => {
+                    c8.screen_to_file();
                 },
                 _ => {}
             }
@@ -54,5 +63,11 @@ pub fn main() {
         }
 
         canvas.present();
+
+        instr_count += 1;
+        if (instr_count == 200) {
+            c8.screen_to_file();
+            break 'running
+        }
     }
 }
