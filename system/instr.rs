@@ -961,3 +961,35 @@ impl Instr for ReadRegsFromMemInstr {
         self.core.flags
     }
 }
+
+pub struct SetSoundTimerInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl SetSoundTimerInstr {
+    pub fn new(opc: u16) -> SetSoundTimerInstr {
+        SetSoundTimerInstr {
+            core: InstrCore::new(opc, InstrFlags::Sound),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for SetSoundTimerInstr {
+    fn repr(&self) -> String {
+        format!("LD ST, V{}", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.sound_timer = c8.v_regs[self.vx as usize];
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}

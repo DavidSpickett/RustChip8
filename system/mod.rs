@@ -15,6 +15,7 @@ pub enum InstrFlags {
     _None,
     Screen,
     Keys,
+    Sound,
 }
 
 pub struct Chip8System {
@@ -201,7 +202,7 @@ impl Chip8System {
                     0xF007 => Box::new(GetDelayTimerInstr::new(opcode)) as Box<Instr>,
                     //0xF00A
                     0xF015 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
-                    //0xF018
+                    0xF018 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
                     0xF01E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
                     //0xF029
                     //0xF033
@@ -221,6 +222,14 @@ impl Chip8System {
     }
 
     pub fn fetch_and_decode(&mut self) -> Box<Instr> {
+        //TODO: better way to do/time this
+        if self.delay_timer != 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer != 0 {
+            self.sound_timer -= 1;
+        }
+
         let opc = self.fetch();
         self.get_opcode_obj(opc)
     }
