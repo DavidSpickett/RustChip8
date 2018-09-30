@@ -952,7 +952,42 @@ impl Instr for ReadRegsFromMemInstr {
     fn exec(&self, c8: &mut Chip8System) {
         let addr = c8.i_reg as usize;
         for reg_idx in 0..(self.vx+1) {
-            c8.v_regs[reg_idx as usize] = c8.memory[addr];
+            c8.v_regs[reg_idx as usize] = c8.memory[addr+(reg_idx as usize)];
+        }
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct WriteRegsToMemInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl WriteRegsToMemInstr {
+    pub fn new(opc: u16) -> WriteRegsToMemInstr {
+        WriteRegsToMemInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for WriteRegsToMemInstr {
+    fn repr(&self) -> String {
+        format!("LD [I], V{}", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let addr = c8.i_reg as usize;
+        for reg_idx in 0..(self.vx+1) {
+            c8.memory[addr+(reg_idx as usize)] = c8.v_regs[reg_idx as usize];
         }
     }
 
@@ -1203,6 +1238,38 @@ impl Instr for StoreBCDInstr {
         addr += 1;
 
         c8.memory[addr] = value;
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct WaitForKeyInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl WaitForKeyInstr {
+    pub fn new(opc: u16) -> WaitForKeyInstr {
+        WaitForKeyInstr {
+            core: InstrCore::new(opc, InstrFlags::WaitKey),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for WaitForKeyInstr {
+    fn repr(&self) -> String {
+        format!("LD V{}, K", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] = c8.pressed_key as u8;
     }
 
     fn get_opcode(&self) -> u16 {

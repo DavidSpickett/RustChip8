@@ -4,7 +4,7 @@ use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
-use std::time::Duration;
+//use std::time::Duration;
 use sdl2::rect::Rect;
 
 mod system;
@@ -25,7 +25,7 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut c8 = system::make_system(String::from("TETRIS"));
+    let mut c8 = system::make_system(String::from("KEYPAD_TEST"));
 
     /*TODO: Hammer the instruction encodings!
     for opcode in 0..0xFFFF {
@@ -45,17 +45,19 @@ pub fn main() {
         }
         //TODO: frame limit? Some kind of 'virtual clock speed'?
         //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+
+        //Note that these are in the chip8's order, not the PC's keyboard layout
+        let chip8_keys = [
+           Scancode::X,    Scancode::Num1, Scancode::Num2, Scancode::Num3,
+           Scancode::Q,    Scancode::W,    Scancode::E,    Scancode::A,
+           Scancode::S,    Scancode::D,    Scancode::Z,    Scancode::C,
+           Scancode::Num4, Scancode::R,    Scancode::F,    Scancode::V,
+        ];
  
         let instr = c8.fetch_and_decode();
         let flags = instr.get_flags();
         match flags {
             system::InstrFlags::Keys => {
-                let chip8_keys = [
-                   Scancode::Num1, Scancode::Num2, Scancode::Num3, Scancode::Num4,
-                   Scancode::Q,    Scancode::W,    Scancode::E,    Scancode::R,
-                   Scancode::A,    Scancode::S,    Scancode::D,    Scancode::F,
-                   Scancode::Z,    Scancode::X,    Scancode::C,    Scancode::V,
-                ];
                 let mut chip8_keystate: [bool; 16] = [false; 16];
                 let key_state = event_pump.keyboard_state();
 
@@ -64,6 +66,30 @@ pub fn main() {
                 }
 
                 c8.update_keys(chip8_keystate);
+            }
+            system::InstrFlags::WaitKey => {
+                'polling : loop {
+                    {
+                        let key_state = event_pump.keyboard_state();
+                        for (idx, scancode) in chip8_keys.iter().enumerate() {
+                            if key_state.is_scancode_pressed(*scancode) {
+                                c8.pressed_key = idx;
+                                break 'polling
+                            }
+                        }
+                    } // To force event_pump ref to be dropped here
+                   
+                    // Need this here so application still responds while waiting
+                    // TODO: de-dupe
+                    for event in event_pump.poll_iter() {
+                        match event {
+                            Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), ..} => {
+                                break 'running
+                            }
+                            _ => {},
+                        };
+                    }
+                }
             }
             _ => {},
         }

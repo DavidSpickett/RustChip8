@@ -15,6 +15,7 @@ pub enum InstrFlags {
     _None,
     Screen,
     Keys,
+    WaitKey,
     Sound,
 }
 
@@ -23,6 +24,7 @@ pub struct Chip8System {
     memory : [u8 ; 0xFFFF],
     pub screen : [bool ; 64*32],
     pub keys : [bool ; 16],
+    pub pressed_key : usize,
     v_regs : [u8 ; 16],
     i_reg : u16,
     stack : [u16 ; 16],
@@ -38,6 +40,7 @@ impl Chip8System {
             memory: [0; 0xFFFF],
             screen: [false; 64*32],
             keys: [false; 16],
+            pressed_key: 0,
             v_regs: [0; 16],
             i_reg: 0,
             stack: [0; 16],
@@ -200,13 +203,13 @@ impl Chip8System {
             0xF => {
                 match opcode & 0xF0FF {
                     0xF007 => Box::new(GetDelayTimerInstr::new(opcode)) as Box<Instr>,
-                    //0xF00A
+                    0xF00A => Box::new(WaitForKeyInstr::new(opcode)) as Box<Instr>,
                     0xF015 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
                     0xF018 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
                     0xF01E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
                     0xF029 => Box::new(GetDigitAddrInstr::new(opcode)) as Box<Instr>,
                     0xF033 => Box::new(StoreBCDInstr::new(opcode)) as Box<Instr>,
-                    //0xF055
+                    0xF055 => Box::new(WriteRegsToMemInstr::new(opcode)) as Box<Instr>,
                     0xF065 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
