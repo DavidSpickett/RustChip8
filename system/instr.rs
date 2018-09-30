@@ -1,6 +1,9 @@
 use system::Chip8System;
 use system::InstrFlags;
 
+extern crate rand;
+use system::instr::rand::Rng;
+
 fn op_to_kk(opcode: u16) -> u8 {
     (opcode & 0xFF) as u8
 }
@@ -983,6 +986,41 @@ impl Instr for SetSoundTimerInstr {
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.sound_timer = c8.v_regs[self.vx as usize];
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct RandomInstr {
+    core: InstrCore,
+    vx: u8,
+    kk: u8,
+}
+
+impl RandomInstr {
+    pub fn new(opc: u16) -> RandomInstr {
+        RandomInstr {
+            core: InstrCore::new(opc, InstrFlags::Sound),
+            vx: op_to_vx(opc),
+            kk: op_to_kk(opc),
+        }
+    }
+}
+
+impl Instr for RandomInstr {
+    fn repr(&self) -> String {
+        format!("RND V{}, 0x{:02x}", self.vx, self.kk)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let mut rng = rand::thread_rng();
+        c8.v_regs[self.vx as usize] = self.kk & rng.gen::<u8>();
     }
 
     fn get_opcode(&self) -> u16 {

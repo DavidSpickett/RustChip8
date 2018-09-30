@@ -5,6 +5,7 @@ authors = ["David Spickett"]
 
 [dependencies]
 sdl2 = "0.31"
+rand = "0.3.0"
 
 [[bin]]
 name = "RChip8"
