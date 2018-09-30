@@ -162,7 +162,7 @@ impl Chip8System {
             0x2 => Box::new(CallInstr::new(opcode)) as Box<Instr>,
             0x3 => Box::new(SkipEqualInstr::new(opcode)) as Box<Instr>,
             0x4 => Box::new(SkipNotEqualInstr::new(opcode)) as Box<Instr>,
-          //0x5 =>
+            0x5 => Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<Instr>,
             0x6 => Box::new(LoadByteInstr::new(opcode)) as Box<Instr>,
             0x7 => Box::new(AddByteInstr::new(opcode)) as Box<Instr>,
             0x8 => {
@@ -182,7 +182,7 @@ impl Chip8System {
                     }
                 }
             }
-          //0x9 =>
+            0x9 => Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>,
             0xA => Box::new(LoadIInstr::new(opcode)) as Box<Instr>,
           //0xB =>
             0xC => Box::new(RandomInstr::new(opcode)) as Box<Instr>,

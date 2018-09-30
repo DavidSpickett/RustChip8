@@ -1031,3 +1031,76 @@ impl Instr for RandomInstr {
         self.core.flags
     }
 }
+
+pub struct SkipIfRegsEqualInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl SkipIfRegsEqualInstr {
+    pub fn new(opc: u16) -> SkipIfRegsEqualInstr {
+        SkipIfRegsEqualInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for SkipIfRegsEqualInstr {
+    fn repr(&self) -> String {
+        format!("SE V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        if c8.v_regs[self.vx as usize] == c8.v_regs[self.vy as usize] {
+            c8.pc += 2;
+        }
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct SkipIfRegsNotEqualInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl SkipIfRegsNotEqualInstr {
+    pub fn new(opc: u16) -> SkipIfRegsNotEqualInstr {
+        SkipIfRegsNotEqualInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for SkipIfRegsNotEqualInstr {
+    fn repr(&self) -> String {
+        format!("SNE V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        if c8.v_regs[self.vx as usize] != c8.v_regs[self.vy as usize] {
+            c8.pc += 2;
+        }
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
