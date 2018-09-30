@@ -19,7 +19,7 @@ fn op_to_vy(opcode: u16) -> u8 {
 
 pub trait Instr {
     fn repr(&self) -> String;
-    fn exec(&self, C8: &mut Chip8System);
+    fn exec(&self, c8: &mut Chip8System);
     //fn construct() -> instr; //because writing an assembler is too hard
     fn get_opcode(&self) -> u16;
     fn get_flags(&self) -> InstrFlags;
@@ -39,26 +39,29 @@ impl InstrCore {
     }
 }
 
-pub struct undef_instr {
+#[allow(dead_code)]
+pub struct UndefInstr {
     core: InstrCore,
     message: String,
 }
 
-impl undef_instr {
-    pub fn new(opc: u16, msg: String) -> undef_instr {
-        undef_instr {
+#[allow(dead_code)]
+impl UndefInstr {
+    pub fn new(opc: u16, msg: String) -> UndefInstr {
+        UndefInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             message: msg,
         }
     }
 }
 
-impl Instr for undef_instr {
+#[allow(dead_code)]
+impl Instr for UndefInstr {
     fn repr(&self) -> String {
         format!("{}", self.message) 
     }
 
-    fn exec(&self, C8: &mut Chip8System) {}
+    fn exec(&self, _c8: &mut Chip8System) {}
 
     fn get_opcode(&self) -> u16 {
         self.core.opcode
@@ -69,29 +72,29 @@ impl Instr for undef_instr {
     }
 }
 
-pub struct call_instr {
+pub struct CallInstr {
     core: InstrCore,
     target: u16,
 }
 
-impl call_instr {
-    pub fn new(opc: u16) -> call_instr {
-        call_instr {
+impl CallInstr {
+    pub fn new(opc: u16) -> CallInstr {
+        CallInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             target: op_to_nnn(opc),
         }
     }
 }
 
-impl Instr for call_instr {
+impl Instr for CallInstr {
     fn repr(&self) -> String {
         format!("CALL 0x{:03x}", self.target)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.stack_ptr += 1;
-        C8.stack[C8.stack_ptr as usize] = C8.pc;
-        C8.pc = op_to_nnn(self.core.opcode);
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.stack_ptr += 1;
+        c8.stack[c8.stack_ptr as usize] = c8.pc;
+        c8.pc = op_to_nnn(self.core.opcode);
     }
 
     fn get_opcode(&self) -> u16 {
@@ -103,27 +106,27 @@ impl Instr for call_instr {
     }
 }
 
-pub struct jump_instr {
+pub struct JumpInstr {
     core: InstrCore,
     target: u16,
 }
 
-impl jump_instr {
-    pub fn new(opc: u16) -> jump_instr {
-        jump_instr {
+impl JumpInstr {
+    pub fn new(opc: u16) -> JumpInstr {
+        JumpInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             target: op_to_nnn(opc),
         }
     }
 }
 
-impl Instr for jump_instr {
+impl Instr for JumpInstr {
     fn repr(&self) -> String {
         format!("JP 0x{:03x}", self.target)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.pc = self.target;
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.pc = self.target;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -135,26 +138,26 @@ impl Instr for jump_instr {
     }
 }
 
-pub struct ret_instr {
+pub struct RetInstr {
     core: InstrCore,
 }
 
-impl ret_instr {
-    pub fn new(opc: u16) -> ret_instr {
-        ret_instr {
+impl RetInstr {
+    pub fn new(opc: u16) -> RetInstr {
+        RetInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
         }
     }
 }
 
-impl Instr for ret_instr {
+impl Instr for RetInstr {
     fn repr(&self) -> String {
         format!("RET")
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.pc = C8.stack[C8.stack_ptr as usize];
-        C8.stack_ptr -= 1;
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.pc = c8.stack[c8.stack_ptr as usize];
+        c8.stack_ptr -= 1;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -166,15 +169,15 @@ impl Instr for ret_instr {
     }
 }
 
-pub struct skip_equal_instr {
+pub struct SkipEqualInstr {
     core: InstrCore,
     vx: u8,
     kk: u8,
 }
 
-impl skip_equal_instr {
-    pub fn new(opc: u16) -> skip_equal_instr {
-        skip_equal_instr {
+impl SkipEqualInstr {
+    pub fn new(opc: u16) -> SkipEqualInstr {
+        SkipEqualInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
@@ -182,14 +185,14 @@ impl skip_equal_instr {
     }
 }
 
-impl Instr for skip_equal_instr {
+impl Instr for SkipEqualInstr {
     fn repr(&self) -> String {
         format!("SE V{}, 0x{:02x}", self.vx, self.kk)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        if C8.v_regs[self.vx as usize] == self.kk {
-            C8.pc += 2;
+    fn exec(&self, c8: &mut Chip8System) {
+        if c8.v_regs[self.vx as usize] == self.kk {
+            c8.pc += 2;
         }
     }
 
@@ -202,15 +205,15 @@ impl Instr for skip_equal_instr {
     }
 }
 
-pub struct skip_not_equal_instr {
+pub struct SkipNotEqualInstr {
     core: InstrCore,
     vx: u8,
     kk: u8,
 }
 
-impl skip_not_equal_instr {
-    pub fn new(opc: u16) -> skip_not_equal_instr {
-        skip_not_equal_instr {
+impl SkipNotEqualInstr {
+    pub fn new(opc: u16) -> SkipNotEqualInstr {
+        SkipNotEqualInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
@@ -218,14 +221,14 @@ impl skip_not_equal_instr {
     }
 }
 
-impl Instr for skip_not_equal_instr {
+impl Instr for SkipNotEqualInstr {
     fn repr(&self) -> String {
         format!("SNE V{}, 0x{:02x}", self.vx, self.kk)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        if C8.v_regs[self.vx as usize] != self.kk {
-            C8.pc +=2;
+    fn exec(&self, c8: &mut Chip8System) {
+        if c8.v_regs[self.vx as usize] != self.kk {
+            c8.pc +=2;
         }
     }
 
@@ -238,15 +241,15 @@ impl Instr for skip_not_equal_instr {
     }
 }
 
-pub struct load_byte_instr {
+pub struct LoadByteInstr {
     core: InstrCore,
     vx: u8,
     kk: u8,
 }
 
-impl load_byte_instr {
-    pub fn new(opc: u16) -> load_byte_instr {
-        load_byte_instr {
+impl LoadByteInstr {
+    pub fn new(opc: u16) -> LoadByteInstr {
+        LoadByteInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
@@ -254,13 +257,13 @@ impl load_byte_instr {
     }
 }
 
-impl Instr for load_byte_instr {
+impl Instr for LoadByteInstr {
     fn repr(&self) -> String {
         format!("LD V{}, 0x{:02x}", self.vx, self.kk)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.v_regs[self.vx as usize] = self.kk;
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] = self.kk;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -272,25 +275,25 @@ impl Instr for load_byte_instr {
     }
 }
 
-pub struct clear_display_instr {
+pub struct ClearDisplayInstr {
     core: InstrCore,
 }
 
-impl clear_display_instr {
-    pub fn new(opc: u16) -> clear_display_instr {
-        clear_display_instr {
+impl ClearDisplayInstr {
+    pub fn new(opc: u16) -> ClearDisplayInstr {
+        ClearDisplayInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
         }
     }
 }
 
-impl Instr for clear_display_instr {
+impl Instr for ClearDisplayInstr {
     fn repr(&self) -> String {
         String::from("CLS")
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        for p in C8.screen.iter_mut() {
+    fn exec(&self, c8: &mut Chip8System) {
+        for p in c8.screen.iter_mut() {
             *p = false;
         }
     }
@@ -304,15 +307,15 @@ impl Instr for clear_display_instr {
     }
 }
 
-pub struct mov_reg_instr {
+pub struct MovRegInstr {
     core: InstrCore,
     vx: u8,
     vy: u8,
 }
 
-impl mov_reg_instr {
-    pub fn new(opc: u16) -> mov_reg_instr {
-        mov_reg_instr {
+impl MovRegInstr {
+    pub fn new(opc: u16) -> MovRegInstr {
+        MovRegInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
@@ -320,13 +323,13 @@ impl mov_reg_instr {
     }
 }
 
-impl Instr for mov_reg_instr {
+impl Instr for MovRegInstr {
     fn repr(&self) -> String {
         format!("LD V{}, V{}", self.vx, self.vy)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.v_regs[self.vx as usize] = C8.v_regs[self.vy as usize];
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] = c8.v_regs[self.vy as usize];
     }
 
     fn get_opcode(&self) -> u16 {
@@ -338,27 +341,95 @@ impl Instr for mov_reg_instr {
     }
 }
 
-pub struct load_i_instr {
+pub struct OrRegInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl OrRegInstr {
+    pub fn new(opc: u16) -> OrRegInstr {
+        OrRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for OrRegInstr {
+    fn repr(&self) -> String {
+        format!("OR V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] |= c8.v_regs[self.vy as usize];
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct AndRegInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl AndRegInstr {
+    pub fn new(opc: u16) -> AndRegInstr {
+        AndRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for AndRegInstr {
+    fn repr(&self) -> String {
+        format!("AND V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] &= c8.v_regs[self.vy as usize];
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct LoadIInstr {
     core: InstrCore,
     nnn: u16,
 }
 
-impl load_i_instr {
-    pub fn new(opc: u16) -> load_i_instr {
-        load_i_instr {
+impl LoadIInstr {
+    pub fn new(opc: u16) -> LoadIInstr {
+        LoadIInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             nnn: op_to_nnn(opc),
         }
     }
 }
 
-impl Instr for load_i_instr {
+impl Instr for LoadIInstr {
     fn repr(&self) -> String {
         format!("LD I, 0x{:03x}", self.nnn)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.i_reg = self.nnn;
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.i_reg = self.nnn;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -370,15 +441,15 @@ impl Instr for load_i_instr {
     }
 }
 
-pub struct add_byte_instr {
+pub struct AddByteInstr {
     core: InstrCore,
     vx: u8,
     kk: u8,
 }
 
-impl add_byte_instr {
-    pub fn new(opc: u16) -> add_byte_instr {
-        add_byte_instr {
+impl AddByteInstr {
+    pub fn new(opc: u16) -> AddByteInstr {
+        AddByteInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
@@ -386,13 +457,13 @@ impl add_byte_instr {
     }
 }
 
-impl Instr for add_byte_instr {
+impl Instr for AddByteInstr {
     fn repr(&self) -> String {
         format!("ADD V{}, 0x{:02x}", self.vx, self.kk)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.v_regs[self.vx as usize] = C8.v_regs[self.vx as usize].wrapping_add(self.kk)
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] = c8.v_regs[self.vx as usize].wrapping_add(self.kk)
     }
 
     fn get_opcode(&self) -> u16 {
@@ -404,27 +475,27 @@ impl Instr for add_byte_instr {
     }
 }
 
-pub struct add_iv_instr {
+pub struct AddIVInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl add_iv_instr {
-    pub fn new(opc: u16) -> add_iv_instr {
-        add_iv_instr {
+impl AddIVInstr {
+    pub fn new(opc: u16) -> AddIVInstr {
+        AddIVInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for add_iv_instr {
+impl Instr for AddIVInstr {
     fn repr(&self) -> String {
         format!("ADD I, V{}", self.vx)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.i_reg += C8.v_regs[self.vx as usize] as u16
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.i_reg += c8.v_regs[self.vx as usize] as u16
     }
 
     fn get_opcode(&self) -> u16 {
@@ -436,27 +507,27 @@ impl Instr for add_iv_instr {
     }
 }
 
-pub struct set_delay_timer_instr {
+pub struct SetDelayTimerInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl set_delay_timer_instr {
-    pub fn new(opc: u16) -> set_delay_timer_instr {
-        set_delay_timer_instr {
+impl SetDelayTimerInstr {
+    pub fn new(opc: u16) -> SetDelayTimerInstr {
+        SetDelayTimerInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for set_delay_timer_instr {
+impl Instr for SetDelayTimerInstr {
     fn repr(&self) -> String {
         format!("LD DT, V{}", self.vx)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.delay_timer = C8.v_regs[self.vx as usize]
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.delay_timer = c8.v_regs[self.vx as usize]
     }
 
     fn get_opcode(&self) -> u16 {
@@ -468,27 +539,27 @@ impl Instr for set_delay_timer_instr {
     }
 }
 
-pub struct get_delay_timer_instr {
+pub struct GetDelayTimerInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl get_delay_timer_instr {
-    pub fn new(opc: u16) -> get_delay_timer_instr {
-        get_delay_timer_instr {
+impl GetDelayTimerInstr {
+    pub fn new(opc: u16) -> GetDelayTimerInstr {
+        GetDelayTimerInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for get_delay_timer_instr {
+impl Instr for GetDelayTimerInstr {
     fn repr(&self) -> String {
         format!("LD V{}, DT", self.vx)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        C8.v_regs[self.vx as usize] = C8.delay_timer
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] = c8.delay_timer
     }
 
     fn get_opcode(&self) -> u16 {
@@ -500,16 +571,16 @@ impl Instr for get_delay_timer_instr {
     }
 }
 
-pub struct draw_sprite_instr {
+pub struct DrawSpriteInstr {
     core: InstrCore,
     vx: u8,
     vy: u8,
     n: u8,
 }
 
-impl draw_sprite_instr {
-    pub fn new(opc: u16) -> draw_sprite_instr {
-        draw_sprite_instr {
+impl DrawSpriteInstr {
+    pub fn new(opc: u16) -> DrawSpriteInstr {
+        DrawSpriteInstr {
             core: InstrCore::new(opc, InstrFlags::Screen),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
@@ -518,19 +589,19 @@ impl draw_sprite_instr {
     }
 }
 
-impl Instr for draw_sprite_instr {
+impl Instr for DrawSpriteInstr {
     fn repr(&self) -> String {
         format!("DRW V{}, V{}, {}", self.vx, self.vy, self.n)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
+    fn exec(&self, c8: &mut Chip8System) {
         //Clear overlap flag
-        C8.v_regs[15] = 0;
+        c8.v_regs[15] = 0;
 
-        let x = C8.v_regs[self.vx as usize];
-        let y = C8.v_regs[self.vy as usize];
-        let addr = C8.i_reg as usize;
-        let sprite_data = &C8.memory[addr..addr+(self.n as usize)];
+        let x = c8.v_regs[self.vx as usize];
+        let y = c8.v_regs[self.vy as usize];
+        let addr = c8.i_reg as usize;
+        let sprite_data = &c8.memory[addr..addr+(self.n as usize)];
 
         for (y_offset, row) in sprite_data.iter().enumerate() {
             for sprite_x in (0..8).rev() {
@@ -539,12 +610,12 @@ impl Instr for draw_sprite_instr {
                 let screen_idx = (final_y*64)+final_x;
 
                 let pixel_set = *row & (1 << sprite_x) != 0; 
-                let pixel_was = C8.screen[screen_idx];
+                let pixel_was = c8.screen[screen_idx];
                  
                 if pixel_set && pixel_was {
-                    C8.v_regs[15] = 1;
+                    c8.v_regs[15] = 1;
                 }
-                C8.screen[screen_idx] ^= pixel_set;
+                c8.screen[screen_idx] ^= pixel_set;
             }
         }
     }
@@ -558,29 +629,29 @@ impl Instr for draw_sprite_instr {
     }
 }
 
-pub struct skip_key_if_pressed_instr {
+pub struct SkipKeyIfPressedInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl skip_key_if_pressed_instr {
-    pub fn new(opc: u16) -> skip_key_if_pressed_instr {
-        skip_key_if_pressed_instr {
+impl SkipKeyIfPressedInstr {
+    pub fn new(opc: u16) -> SkipKeyIfPressedInstr {
+        SkipKeyIfPressedInstr {
             core: InstrCore::new(opc, InstrFlags::Keys),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for skip_key_if_pressed_instr {
+impl Instr for SkipKeyIfPressedInstr {
     fn repr(&self) -> String {
         format!("SKP V{}", self.vx)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        let key_num = C8.v_regs[self.vx as usize] as usize;
-        if C8.keys[key_num] {
-            C8.pc += 2;
+    fn exec(&self, c8: &mut Chip8System) {
+        let key_num = c8.v_regs[self.vx as usize] as usize;
+        if c8.keys[key_num] {
+            c8.pc += 2;
         }
     }
 
@@ -593,29 +664,29 @@ impl Instr for skip_key_if_pressed_instr {
     }
 }
 
-pub struct skip_key_if_not_pressed_instr {
+pub struct SkipKeyIfNotPressedInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl skip_key_if_not_pressed_instr {
-    pub fn new(opc: u16) -> skip_key_if_not_pressed_instr {
-        skip_key_if_not_pressed_instr {
+impl SkipKeyIfNotPressedInstr {
+    pub fn new(opc: u16) -> SkipKeyIfNotPressedInstr {
+        SkipKeyIfNotPressedInstr {
             core: InstrCore::new(opc, InstrFlags::Keys),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for skip_key_if_not_pressed_instr {
+impl Instr for SkipKeyIfNotPressedInstr {
     fn repr(&self) -> String {
         format!("SKNP V{}", self.vx)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        let key_num = C8.v_regs[self.vx as usize] as usize;
-        if !C8.keys[key_num] {
-            C8.pc += 2;
+    fn exec(&self, c8: &mut Chip8System) {
+        let key_num = c8.v_regs[self.vx as usize] as usize;
+        if !c8.keys[key_num] {
+            c8.pc += 2;
         }
     }
 
@@ -628,29 +699,29 @@ impl Instr for skip_key_if_not_pressed_instr {
     }
 }
 
-pub struct read_regs_from_mem_instr {
+pub struct ReadRegsFromMemInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl read_regs_from_mem_instr {
-    pub fn new(opc: u16) -> read_regs_from_mem_instr {
-        read_regs_from_mem_instr {
+impl ReadRegsFromMemInstr {
+    pub fn new(opc: u16) -> ReadRegsFromMemInstr {
+        ReadRegsFromMemInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for read_regs_from_mem_instr {
+impl Instr for ReadRegsFromMemInstr {
     fn repr(&self) -> String {
         format!("LD V{}, [I]", self.vx)
     }
 
-    fn exec(&self, C8: &mut Chip8System) {
-        let addr = C8.i_reg as usize;
+    fn exec(&self, c8: &mut Chip8System) {
+        let addr = c8.i_reg as usize;
         for reg_idx in 0..(self.vx+1) {
-            C8.v_regs[reg_idx as usize] = C8.memory[addr];
+            c8.v_regs[reg_idx as usize] = c8.memory[addr];
         }
     }
 

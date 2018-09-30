@@ -57,9 +57,15 @@ impl Chip8System {
         for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
             if ((i % 64) == 0) &&  i != 0 { // TODO: make the screen a 2d array?
                 row.push('\n');
-                file.write(row.as_bytes());
-                row.clear();
+                match file.write(row.as_bytes()) {
+                    Err(why) => {
+                        panic!("couldn't write to screen dump!: {}",
+                                why.description())
+                    },
+                    Ok(_) => {},
+                };
             }
+
             match *pixel {
                 true => row.push('*'),
                 false => row.push(' '),
@@ -73,6 +79,7 @@ impl Chip8System {
         }
     }
 
+    #[allow(dead_code)]
     fn dump(&self) {
         println!("----- Chip8 State -----");
         println!("PC: 0x{:04x} I: 0x{:04x}", self.pc, self.i_reg);
@@ -134,18 +141,6 @@ impl Chip8System {
         return opcode
     }
 
-    fn get_vx(&self, opcode: u16) -> u8 {
-        self.v_regs[((opcode >> 8) & 0xF) as usize]
-    }
-
-    fn get_vy(&self, opcode: u16) -> u8 {
-        self.v_regs[((opcode >> 4) & 0xF) as usize]
-    }
-
-    fn set_vx(&mut self, opcode: u16, value: u8) {
-        self.v_regs[((opcode >> 8) & 0xF) as usize] = value;
-    }
-
     fn panic_unknown(&self, opcode: u16) {
         panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2);
     }
@@ -154,24 +149,24 @@ impl Chip8System {
         match opcode >> 12 {
             0x0 => {
                 match opcode & 0xFF {
-                    0xE0 => Box::new(clear_display_instr::new(opcode)) as Box<Instr>,
-                    0xEE => Box::new(ret_instr::new(opcode)) as Box<Instr>,
+                    0xE0 => Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>,
+                    0xEE => Box::new(RetInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
                     }
                 }
             }
-            0x1 => Box::new(jump_instr::new(opcode)) as Box<Instr>,
-            0x2 => Box::new(call_instr::new(opcode)) as Box<Instr>,
-            0x3 => Box::new(skip_equal_instr::new(opcode)) as Box<Instr>,
-            0x4 => Box::new(skip_not_equal_instr::new(opcode)) as Box<Instr>,
+            0x1 => Box::new(JumpInstr::new(opcode)) as Box<Instr>,
+            0x2 => Box::new(CallInstr::new(opcode)) as Box<Instr>,
+            0x3 => Box::new(SkipEqualInstr::new(opcode)) as Box<Instr>,
+            0x4 => Box::new(SkipNotEqualInstr::new(opcode)) as Box<Instr>,
           //0x5 =>
-            0x6 => Box::new(load_byte_instr::new(opcode)) as Box<Instr>,
-            0x7 => Box::new(add_byte_instr::new(opcode)) as Box<Instr>,
+            0x6 => Box::new(LoadByteInstr::new(opcode)) as Box<Instr>,
+            0x7 => Box::new(AddByteInstr::new(opcode)) as Box<Instr>,
             0x8 => {
                 match opcode & 0xF00F {
-                    0x8000 => Box::new(mov_reg_instr::new(opcode)) as Box<Instr>,
+                    0x8000 => Box::new(MovRegInstr::new(opcode)) as Box<Instr>,
                     //0x8001 =>
                     //0x8002 =>
                     //0x8003 =>
@@ -187,14 +182,14 @@ impl Chip8System {
                 }
             }
           //0x9 =>
-            0xA => Box::new(load_i_instr::new(opcode)) as Box<Instr>,
+            0xA => Box::new(LoadIInstr::new(opcode)) as Box<Instr>,
           //0xB =>
           //0xC =>
-            0xD => Box::new(draw_sprite_instr::new(opcode)) as Box<Instr>,
+            0xD => Box::new(DrawSpriteInstr::new(opcode)) as Box<Instr>,
             0xE => {
                 match opcode & 0xFF {
-                    0x9E => Box::new(skip_key_if_pressed_instr::new(opcode)) as Box<Instr>,
-                    0xA1 => Box::new(skip_key_if_not_pressed_instr::new(opcode)) as Box<Instr>,
+                    0x9E => Box::new(SkipKeyIfPressedInstr::new(opcode)) as Box<Instr>,
+                    0xA1 => Box::new(SkipKeyIfNotPressedInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
@@ -203,15 +198,15 @@ impl Chip8System {
             }
             0xF => {
                 match opcode & 0xF0FF {
-                    0xF007 => Box::new(get_delay_timer_instr::new(opcode)) as Box<Instr>,
+                    0xF007 => Box::new(GetDelayTimerInstr::new(opcode)) as Box<Instr>,
                     //0xF00A
-                    0xF015 => Box::new(set_delay_timer_instr::new(opcode)) as Box<Instr>,
+                    0xF015 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
                     //0xF018
-                    0xF01E => Box::new(add_iv_instr::new(opcode)) as Box<Instr>, 
+                    0xF01E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
                     //0xF029
                     //0xF033
                     //0xF055
-                    0xF065 => Box::new(read_regs_from_mem_instr::new(opcode)) as Box<Instr>,
+                    0xF065 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");

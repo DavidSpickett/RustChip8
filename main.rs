@@ -79,7 +79,12 @@ pub fn main() {
                     if *pixel {
                         let x = ((idx as i32) % 64) * pixel_size;
                         let y = ((idx as i32) / 64) * pixel_size;
-                        canvas.fill_rect(Rect::new(x, y, pixel_size as u32, pixel_size as u32));
+                        match canvas.fill_rect(Rect::new(x, y, pixel_size as u32, pixel_size as u32)) {
+                            Err(why) => {
+                                panic!("couldn't draw to screen!: {}", why);
+                            },
+                            Ok(_) => {},
+                        }
                     }
                 }
 
