@@ -225,12 +225,19 @@ impl Chip8System {
     }
 
     pub fn fetch_and_decode(&mut self) -> Box<Instr> {
-        //TODO: better way to do/time this
-        if self.delay_timer != 0 {
-            self.delay_timer -= 1;
-        }
-        if self.sound_timer != 0 {
-            self.sound_timer -= 1;
+        unsafe {
+            static mut DELAY_TIMER_FUDGE: u16 = 10;
+            //TODO: better way to do/time this
+            if DELAY_TIMER_FUDGE != 0 {
+                DELAY_TIMER_FUDGE -= 1;
+            } else {
+                if self.delay_timer != 0 {
+                    self.delay_timer -= 1;
+                }
+            }
+            if self.sound_timer != 0 {
+                self.sound_timer -= 1;
+            }
         }
 
         let opc = self.fetch();

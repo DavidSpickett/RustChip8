@@ -587,7 +587,7 @@ impl Instr for ShrRegInstr {
     fn exec(&self, c8: &mut Chip8System) {
         let x = c8.v_regs[self.vx as usize];
         c8.v_regs[15] = x & 1;
-        c8.v_regs[self.vx as usize] /= 2;        
+        c8.v_regs[self.vx as usize] >>= 1;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -621,7 +621,7 @@ impl Instr for ShlRegInstr {
     fn exec(&self, c8: &mut Chip8System) {
         let x = c8.v_regs[self.vx as usize];
         c8.v_regs[15] = x >> 7;
-        c8.v_regs[self.vx as usize] *= 2;        
+        c8.v_regs[self.vx as usize] <<= 1;
     }
 
     fn get_opcode(&self) -> u16 {
