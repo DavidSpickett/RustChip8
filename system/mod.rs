@@ -184,7 +184,7 @@ impl Chip8System {
             }
             0x9 => Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>,
             0xA => Box::new(LoadIInstr::new(opcode)) as Box<Instr>,
-            0xB => Box::new(JumpPlusVZeroInstr::new(opcode) as Box<Instr>,
+            0xB => Box::new(JumpPlusVZeroInstr::new(opcode)) as Box<Instr>,
             0xC => Box::new(RandomInstr::new(opcode)) as Box<Instr>,
             0xD => Box::new(DrawSpriteInstr::new(opcode)) as Box<Instr>,
             0xE => {
@@ -204,7 +204,7 @@ impl Chip8System {
                     0xF015 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
                     0xF018 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
                     0xF01E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
-                    //0xF029
+                    0xF029 => Box::new(GetDigitAddrInstr::new(opcode)) as Box<Instr>,
                     //0xF033
                     //0xF055
                     0xF065 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,

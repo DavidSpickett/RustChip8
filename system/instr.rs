@@ -1135,3 +1135,36 @@ impl Instr for JumpPlusVZeroInstr {
         self.core.flags
     }
 }
+
+pub struct GetDigitAddrInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl GetDigitAddrInstr {
+    pub fn new(opc: u16) -> GetDigitAddrInstr {
+        GetDigitAddrInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for GetDigitAddrInstr {
+    fn repr(&self) -> String {
+        format!("LD F, V{}", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let digit = c8.v_regs[self.vx as usize] as u16;
+        c8.i_reg = digit*5;
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
