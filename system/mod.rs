@@ -10,6 +10,7 @@ pub fn make_system(rom_name: String) -> Chip8System {
     return c;
 }
 
+#[derive(Copy, Clone)]
 pub enum InstrFlags {
     _None,
     Screen,
@@ -21,7 +22,6 @@ pub struct Chip8System {
     memory : [u8 ; 0xFFFF],
     pub screen : [bool ; 64*32],
     pub keys : [bool ; 16],
-    decoded_instr : Box<Instr>,
     v_regs : [u8 ; 16],
     i_reg : u16,
     stack : [u16 ; 16],
@@ -37,7 +37,6 @@ impl Chip8System {
             memory: [0; 0xFFFF],
             screen: [false; 64*32],
             keys: [false; 16],
-            decoded_instr : Box::new(undef_instr::new(0, "NULL".to_string())) as Box<Instr>,
             v_regs: [0; 16],
             i_reg: 0,
             stack: [0; 16],
@@ -226,18 +225,17 @@ impl Chip8System {
         }
     }
 
-    pub fn fetch_and_decode(&mut self) -> InstrFlags {
+    pub fn fetch_and_decode(&mut self) -> Box<Instr> {
         let opc = self.fetch();
-        self.decoded_instr = self.get_opcode_obj(opc);
-        self.decoded_instr.get_flags()
+        self.get_opcode_obj(opc)
     }
 
-    pub fn execute(&mut self) {
+    pub fn execute(&mut self, instr: Box<Instr>) {
         //TODO: check that fetch and decode has been called
-        let instr = &self.decoded_instr;
         instr.exec(self);
-        println!("0x{:04x} : 0x{:04x} : {}", self.pc-2, self.decoded_instr.get_opcode(),
-                 self.decoded_instr.repr());
+        // -2 because we already fetched beyond this instr
+        println!("0x{:04x} : 0x{:04x} : {}",
+                 self.pc-2, instr.get_opcode(), instr.repr());
     }
 }
 

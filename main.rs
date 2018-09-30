@@ -45,8 +45,8 @@ pub fn main() {
         }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
  
-
-        let flags = c8.fetch_and_decode();
+        let instr = c8.fetch_and_decode();
+        let flags = instr.get_flags();
         match flags {
             system::InstrFlags::Keys => {
                 let chip8_keys = [
@@ -67,7 +67,7 @@ pub fn main() {
             _ => {},
         }
 
-        c8.execute();
+        c8.execute(instr);
 
         match flags {
             system::InstrFlags::Screen => {

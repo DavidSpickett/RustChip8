@@ -78,7 +78,7 @@ impl call_instr {
     pub fn new(opc: u16) -> call_instr {
         call_instr {
             core: InstrCore::new(opc, InstrFlags::_None),
-            target: opc & 0xFFF,
+            target: op_to_nnn(opc),
         }
     }
 }
