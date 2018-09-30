@@ -226,7 +226,7 @@ impl Chip8System {
 
     pub fn fetch_and_decode(&mut self) -> Box<Instr> {
         unsafe {
-            static mut DELAY_TIMER_FUDGE: u16 = 10;
+            static mut DELAY_TIMER_FUDGE: u16 = 100;
             //TODO: better way to do/time this
             if DELAY_TIMER_FUDGE != 0 {
                 DELAY_TIMER_FUDGE -= 1;
@@ -234,6 +234,7 @@ impl Chip8System {
                 if self.delay_timer != 0 {
                     self.delay_timer -= 1;
                 }
+                DELAY_TIMER_FUDGE = 100;
             }
             if self.sound_timer != 0 {
                 self.sound_timer -= 1;
