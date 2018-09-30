@@ -43,7 +43,8 @@ pub fn main() {
                 _ => {}
             }
         }
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        //TODO: frame limit? Some kind of 'virtual clock speed'?
+        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
  
         let instr = c8.fetch_and_decode();
         let flags = instr.get_flags();
