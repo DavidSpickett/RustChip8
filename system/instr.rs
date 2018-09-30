@@ -97,7 +97,7 @@ impl Instr for CallInstr {
     fn exec(&self, c8: &mut Chip8System) {
         c8.stack_ptr += 1;
         c8.stack[c8.stack_ptr as usize] = c8.pc;
-        c8.pc = op_to_nnn(self.core.opcode);
+        c8.pc = self.target;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -514,11 +514,7 @@ impl Instr for SubRegInstr {
         let y = c8.v_regs[self.vy as usize];
 
         c8.v_regs[self.vx as usize].wrapping_sub(y);
-
-        if x > y {
-            c8.v_regs[15] = 1;
-            //TODO: clear carry if this doesn't happen?
-        }
+        c8.v_regs[15] = (x>y) as u8;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -556,11 +552,7 @@ impl Instr for SubNRegInstr {
         let y = c8.v_regs[self.vy as usize];
 
         c8.v_regs[self.vx as usize] = y.wrapping_sub(x);
-
-        if y > x {
-            c8.v_regs[15] = 1;
-            //TODO: clear carry if this doesn't happen?
-        }
+        c8.v_regs[15] = (y>x) as u8;
     }
 
     fn get_opcode(&self) -> u16 {
@@ -606,21 +598,21 @@ impl Instr for ShrRegInstr {
     }
 }
 
-pub struct ShlNRegInstr {
+pub struct ShlRegInstr {
     core: InstrCore,
     vx: u8,
 }
 
-impl ShlNRegInstr {
-    pub fn new(opc: u16) -> ShlNRegInstr {
-        ShlNRegInstr {
+impl ShlRegInstr {
+    pub fn new(opc: u16) -> ShlRegInstr {
+        ShlRegInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
     }
 }
 
-impl Instr for ShlNRegInstr {
+impl Instr for ShlRegInstr {
     fn repr(&self) -> String {
         format!("SHL V{}", self.vx)
     }

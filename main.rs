@@ -25,7 +25,7 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut c8 = system::make_system(String::from("KEYPAD_TEST"));
+    let mut c8 = system::make_system(String::from("INVADERS"));
 
     /*TODO: Hammer the instruction encodings!
     for opcode in 0..0xFFFF {

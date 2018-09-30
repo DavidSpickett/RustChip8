@@ -178,7 +178,7 @@ impl Chip8System {
                     0x8005 => Box::new(SubRegInstr::new(opcode)) as Box<Instr>,
                     0x8006 => Box::new(ShrRegInstr::new(opcode)) as Box<Instr>,
                     0x8007 => Box::new(SubNRegInstr::new(opcode)) as Box<Instr>,
-                    0x800E => Box::new(ShlNRegInstr::new(opcode)) as Box<Instr>,
+                    0x800E => Box::new(ShlRegInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
