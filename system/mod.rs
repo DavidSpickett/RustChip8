@@ -184,7 +184,7 @@ impl Chip8System {
             }
             0x9 => Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>,
             0xA => Box::new(LoadIInstr::new(opcode)) as Box<Instr>,
-          //0xB =>
+            0xB => Box::new(JumpPlusVZeroInstr::new(opcode) as Box<Instr>,
             0xC => Box::new(RandomInstr::new(opcode)) as Box<Instr>,
             0xD => Box::new(DrawSpriteInstr::new(opcode)) as Box<Instr>,
             0xE => {

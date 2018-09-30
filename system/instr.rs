@@ -1104,3 +1104,34 @@ impl Instr for SkipIfRegsNotEqualInstr {
     }
 }
 
+pub struct JumpPlusVZeroInstr {
+    core: InstrCore,
+    target: u16,
+}
+
+impl JumpPlusVZeroInstr {
+    pub fn new(opc: u16) -> JumpPlusVZeroInstr {
+        JumpPlusVZeroInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            target: op_to_nnn(opc),
+        }
+    }
+}
+
+impl Instr for JumpPlusVZeroInstr {
+    fn repr(&self) -> String {
+        format!("JP V0, 0x{:03x}", self.target)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.pc = self.target + (c8.v_regs[0] as u16);
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
