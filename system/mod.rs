@@ -4,10 +4,10 @@ use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
 
-pub fn make_system(rom_name: String) -> Chip8System {
+pub fn make_system(rom_name: &str) -> Chip8System {
     let mut c = Chip8System::new();
-    c.init_memory(rom_name);
-    return c;
+    c.init_memory(&rom_name);
+    c
 }
 
 #[derive(Copy, Clone)]
@@ -61,19 +61,14 @@ impl Chip8System {
         for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
             if ((i % 64) == 0) &&  i != 0 { // TODO: make the screen a 2d array?
                 row.push('\n');
-                match file.write(row.as_bytes()) {
-                    Err(why) => {
-                        panic!("couldn't write to screen dump!: {}",
-                                why.description())
-                    },
-                    Ok(_) => {},
+
+                if let Err(why) = file.write(row.as_bytes()) {
+                    panic!("couldn't write to screen dump!: {}",
+                        why.description())
                 };
             }
 
-            match *pixel {
-                true => row.push('*'),
-                false => row.push(' '),
-            }
+            if *pixel { row.push('*') } else { row.push(' ') }
         }
     }
 
@@ -107,7 +102,7 @@ impl Chip8System {
         }
     }
 
-    fn init_memory(&mut self, rom_name: String) {
+    fn init_memory(&mut self, rom_name: &str) {
         let font_data = [
                         0xF0, 0x90, 0x90, 0x90, 0xF0,  // Zero
                         0x20, 0x60, 0x20, 0x20, 0x70,  // One
@@ -142,7 +137,7 @@ impl Chip8System {
     fn fetch(&mut self) -> u16 {
         let opcode = ((self.memory[self.pc as usize] as u16) << 8) | (self.memory[(self.pc+1) as usize] as u16);
         self.pc += 2;
-        return opcode
+        opcode
     }
 
     fn panic_unknown(&self, opcode: u16) {
@@ -245,7 +240,7 @@ impl Chip8System {
         self.get_opcode_obj(opc)
     }
 
-    pub fn execute(&mut self, instr: Box<Instr>) {
+    pub fn execute(&mut self, instr: &Box<Instr>) {
         //TODO: check that fetch and decode has been called
         instr.exec(self);
         // -2 because we already fetched beyond this instr

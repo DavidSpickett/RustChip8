@@ -25,7 +25,8 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut c8 = system::make_system(String::from("INVADERS"));
+    let rom = String::from("INVADERS");
+    let mut c8 = system::make_system(&rom);
 
     /*TODO: Hammer the instruction encodings!
     for opcode in 0..0xFFFF {
@@ -94,7 +95,7 @@ pub fn main() {
             _ => {},
         }
 
-        c8.execute(instr);
+        c8.execute(&instr);
 
         match flags {
             system::InstrFlags::Screen => {
@@ -106,11 +107,11 @@ pub fn main() {
                     if *pixel {
                         let x = ((idx as i32) % 64) * pixel_size;
                         let y = ((idx as i32) / 64) * pixel_size;
-                        match canvas.fill_rect(Rect::new(x, y, pixel_size as u32, pixel_size as u32)) {
-                            Err(why) => {
-                                panic!("couldn't draw to screen!: {}", why);
-                            },
-                            Ok(_) => {},
+
+                        if let Err(why) = canvas.fill_rect(
+                            Rect::new(x, y, pixel_size as u32,
+                            pixel_size as u32)) {
+                            panic!("couldn't draw to screen!: {}", why);
                         }
                     }
                 }

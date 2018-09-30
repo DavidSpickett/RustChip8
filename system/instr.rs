@@ -61,7 +61,7 @@ impl UndefInstr {
 #[allow(dead_code)]
 impl Instr for UndefInstr {
     fn repr(&self) -> String {
-        format!("{}", self.message) 
+        self.message.to_string()
     }
 
     fn exec(&self, _c8: &mut Chip8System) {}
@@ -155,7 +155,7 @@ impl RetInstr {
 
 impl Instr for RetInstr {
     fn repr(&self) -> String {
-        format!("RET")
+        "RET".to_string()
     }
 
     fn exec(&self, c8: &mut Chip8System) {
