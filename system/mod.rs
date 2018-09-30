@@ -3,8 +3,6 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
-use sdl2::keyboard::KeyboardState;
-use sdl2::keyboard::Scancode;
 
 pub fn make_system(rom_name: String) -> Chip8System {
     let mut c = Chip8System::new();
@@ -12,11 +10,18 @@ pub fn make_system(rom_name: String) -> Chip8System {
     return c;
 }
 
+pub enum InstrFlags {
+    _None,
+    Screen,
+    Keys,
+}
+
 pub struct Chip8System {
     pc : u16,
     memory : [u8 ; 0xFFFF],
     pub screen : [bool ; 64*32],
     pub keys : [bool ; 16],
+    decoded_instr : Box<Instr>,
     v_regs : [u8 ; 16],
     i_reg : u16,
     stack : [u16 ; 16],
@@ -32,6 +37,7 @@ impl Chip8System {
             memory: [0; 0xFFFF],
             screen: [false; 64*32],
             keys: [false; 16],
+            decoded_instr : Box::new(undef_instr::new(0, "NULL".to_string())) as Box<Instr>,
             v_regs: [0; 16],
             i_reg: 0,
             stack: [0; 16],
@@ -62,15 +68,9 @@ impl Chip8System {
         }
     }
 
-    pub fn update_keys(&mut self, key_state: KeyboardState) {
-        let chip8_keys = [
-           Scancode::Num1, Scancode::Num2, Scancode::Num3, Scancode::Num4,
-           Scancode::Q,    Scancode::W,    Scancode::E,    Scancode::R,
-           Scancode::A,    Scancode::S,    Scancode::D,    Scancode::F,
-           Scancode::Z,    Scancode::X,    Scancode::C,    Scancode::V,
-        ];
-        for (scancode, chip8key) in chip8_keys.iter().zip(self.keys.iter_mut()) {
-            *chip8key = key_state.is_scancode_pressed(*scancode);
+    pub fn update_keys(&mut self, key_state: [bool; 16]) {
+        for (state, chip8key) in key_state.iter().zip(self.keys.iter_mut()) {
+            *chip8key = *state;
         }
     }
 
@@ -226,14 +226,18 @@ impl Chip8System {
         }
     }
 
-    pub fn do_opcode(&mut self) {
+    pub fn fetch_and_decode(&mut self) -> InstrFlags {
         let opc = self.fetch();
-        let opcode = self.get_opcode_obj(opc);
-        // -2 since we already fetched
-        println!("0x{:04x} : 0x{:04x} : {}", self.pc-2, opc, opcode.repr());
-        opcode.exec(self);
-        //self.dump();
-        //println!();
+        self.decoded_instr = self.get_opcode_obj(opc);
+        self.decoded_instr.get_flags()
+    }
+
+    pub fn execute(&mut self) {
+        //TODO: check that fetch and decode has been called
+        let instr = &self.decoded_instr;
+        instr.exec(self);
+        println!("0x{:04x} : 0x{:04x} : {}", self.pc-2, self.decoded_instr.get_opcode(),
+                 self.decoded_instr.repr());
     }
 }
 

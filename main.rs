@@ -3,6 +3,7 @@ extern crate sdl2;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::keyboard::Scancode;
 use std::time::Duration;
 use sdl2::rect::Rect;
 
@@ -30,8 +31,6 @@ pub fn main() {
     for opcode in 0..0xFFFF {
     }*/
 
-    let mut instr_count = 0;
-
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -46,28 +45,47 @@ pub fn main() {
         }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
  
-        // TODO: only do this when the instruction that needs it runs
-        c8.update_keys(event_pump.keyboard_state());
-        c8.do_opcode();
-        
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
 
-        canvas.set_draw_color(Color::RGB(0, 255, 0));
-        for (idx, pixel) in c8.screen.iter().enumerate() {
-            if *pixel {
-                let x = ((idx as i32) % 64) * pixel_size;
-                let y = ((idx as i32) / 64) * pixel_size;
-                canvas.fill_rect(Rect::new(x, y, pixel_size as u32, pixel_size as u32));
+        let flags = c8.fetch_and_decode();
+        match flags {
+            system::InstrFlags::Keys => {
+                let chip8_keys = [
+                   Scancode::Num1, Scancode::Num2, Scancode::Num3, Scancode::Num4,
+                   Scancode::Q,    Scancode::W,    Scancode::E,    Scancode::R,
+                   Scancode::A,    Scancode::S,    Scancode::D,    Scancode::F,
+                   Scancode::Z,    Scancode::X,    Scancode::C,    Scancode::V,
+                ];
+                let mut chip8_keystate: [bool; 16] = [false; 16];
+                let key_state = event_pump.keyboard_state();
+
+                for (scancode, chip8key) in chip8_keys.iter().zip(chip8_keystate.iter_mut()) {
+                    *chip8key = key_state.is_scancode_pressed(*scancode);
+                }
+
+                c8.update_keys(chip8_keystate);
             }
+            _ => {},
         }
 
-        canvas.present();
+        c8.execute();
 
-        instr_count += 1;
-        if (instr_count == 200) {
-            c8.screen_to_file();
-            break 'running
+        match flags {
+            system::InstrFlags::Screen => {
+                canvas.set_draw_color(Color::RGB(0, 0, 0));
+                canvas.clear();
+
+                canvas.set_draw_color(Color::RGB(0, 255, 0));
+                for (idx, pixel) in c8.screen.iter().enumerate() {
+                    if *pixel {
+                        let x = ((idx as i32) % 64) * pixel_size;
+                        let y = ((idx as i32) / 64) * pixel_size;
+                        canvas.fill_rect(Rect::new(x, y, pixel_size as u32, pixel_size as u32));
+                    }
+                }
+
+                canvas.present();
+            }
+            _ => {},
         }
     }
 }
