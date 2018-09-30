@@ -1168,3 +1168,48 @@ impl Instr for GetDigitAddrInstr {
         self.core.flags
     }
 }
+
+pub struct StoreBCDInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl StoreBCDInstr {
+    pub fn new(opc: u16) -> StoreBCDInstr {
+        StoreBCDInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for StoreBCDInstr {
+    fn repr(&self) -> String {
+        format!("LD B, V{}", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let mut value = c8.v_regs[self.vx as usize];
+        let mut addr = c8.i_reg as usize;
+
+        let hundreds = value / 100;
+        c8.memory[addr] = hundreds;
+        value -= 100 * hundreds;
+        addr += 1;
+
+        let tens = value / 10;
+        c8.memory[addr] = tens;
+        value -= 10 * tens;
+        addr += 1;
+
+        c8.memory[addr] = value;
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}

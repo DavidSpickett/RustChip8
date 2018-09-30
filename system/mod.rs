@@ -205,7 +205,7 @@ impl Chip8System {
                     0xF018 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
                     0xF01E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
                     0xF029 => Box::new(GetDigitAddrInstr::new(opcode)) as Box<Instr>,
-                    //0xF033
+                    0xF033 => Box::new(StoreBCDInstr::new(opcode)) as Box<Instr>,
                     //0xF055
                     0xF065 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,
                     _ => {
