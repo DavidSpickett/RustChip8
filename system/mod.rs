@@ -169,16 +169,16 @@ impl Chip8System {
             0x6 => Box::new(LoadByteInstr::new(opcode)) as Box<Instr>,
             0x7 => Box::new(AddByteInstr::new(opcode)) as Box<Instr>,
             0x8 => {
-                match opcode & 0xF00F {
-                    0x8000 => Box::new(MovRegInstr::new(opcode)) as Box<Instr>,
-                    0x8001 => Box::new(OrRegInstr::new(opcode)) as Box<Instr>,
-                    0x8002 => Box::new(AndRegInstr::new(opcode)) as Box<Instr>,
-                    0x8003 => Box::new(XORRegInstr::new(opcode)) as Box<Instr>,
-                    0x8004 => Box::new(AddRegInstr::new(opcode)) as Box<Instr>,
-                    0x8005 => Box::new(SubRegInstr::new(opcode)) as Box<Instr>,
-                    0x8006 => Box::new(ShrRegInstr::new(opcode)) as Box<Instr>,
-                    0x8007 => Box::new(SubNRegInstr::new(opcode)) as Box<Instr>,
-                    0x800E => Box::new(ShlRegInstr::new(opcode)) as Box<Instr>,
+                match opcode & 0xF {
+                    0x0 => Box::new(MovRegInstr::new(opcode)) as Box<Instr>,
+                    0x1 => Box::new(OrRegInstr::new(opcode)) as Box<Instr>,
+                    0x2 => Box::new(AndRegInstr::new(opcode)) as Box<Instr>,
+                    0x3 => Box::new(XORRegInstr::new(opcode)) as Box<Instr>,
+                    0x4 => Box::new(AddRegInstr::new(opcode)) as Box<Instr>,
+                    0x5 => Box::new(SubRegInstr::new(opcode)) as Box<Instr>,
+                    0x6 => Box::new(ShrRegInstr::new(opcode)) as Box<Instr>,
+                    0x7 => Box::new(SubNRegInstr::new(opcode)) as Box<Instr>,
+                    0xE => Box::new(ShlRegInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
@@ -201,16 +201,16 @@ impl Chip8System {
                 }
             }
             0xF => {
-                match opcode & 0xF0FF {
-                    0xF007 => Box::new(GetDelayTimerInstr::new(opcode)) as Box<Instr>,
-                    0xF00A => Box::new(WaitForKeyInstr::new(opcode)) as Box<Instr>,
-                    0xF015 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
-                    0xF018 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
-                    0xF01E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
-                    0xF029 => Box::new(GetDigitAddrInstr::new(opcode)) as Box<Instr>,
-                    0xF033 => Box::new(StoreBCDInstr::new(opcode)) as Box<Instr>,
-                    0xF055 => Box::new(WriteRegsToMemInstr::new(opcode)) as Box<Instr>,
-                    0xF065 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,
+                match opcode & 0xFF {
+                    0x07 => Box::new(GetDelayTimerInstr::new(opcode)) as Box<Instr>,
+                    0x0A => Box::new(WaitForKeyInstr::new(opcode)) as Box<Instr>,
+                    0x15 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
+                    0x18 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
+                    0x1E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
+                    0x29 => Box::new(GetDigitAddrInstr::new(opcode)) as Box<Instr>,
+                    0x33 => Box::new(StoreBCDInstr::new(opcode)) as Box<Instr>,
+                    0x55 => Box::new(WriteRegsToMemInstr::new(opcode)) as Box<Instr>,
+                    0x65 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");
