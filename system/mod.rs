@@ -167,14 +167,14 @@ impl Chip8System {
             0x8 => {
                 match opcode & 0xF00F {
                     0x8000 => Box::new(MovRegInstr::new(opcode)) as Box<Instr>,
-                    //0x8001 =>
-                    //0x8002 =>
-                    //0x8003 =>
-                    //0x8004 =>
-                    //0x8005 =>
-                    //0x8006 =>
-                    //0x8006 =>
-                    //0x800E =>
+                    0x8001 => Box::new(OrRegInstr::new(opcode)) as Box<Instr>,
+                    0x8002 => Box::new(AndRegInstr::new(opcode)) as Box<Instr>,
+                    0x8003 => Box::new(XORRegInstr::new(opcode)) as Box<Instr>,
+                    0x8004 => Box::new(AddRegInstr::new(opcode)) as Box<Instr>,
+                    0x8005 => Box::new(SubRegInstr::new(opcode)) as Box<Instr>,
+                    0x8006 => Box::new(ShrRegInstr::new(opcode)) as Box<Instr>,
+                    0x8007 => Box::new(SubNRegInstr::new(opcode)) as Box<Instr>,
+                    0x800E => Box::new(ShlNRegInstr::new(opcode)) as Box<Instr>,
                     _ => {
                         self.panic_unknown(opcode);
                         panic!("");

@@ -409,6 +409,234 @@ impl Instr for AndRegInstr {
     }
 }
 
+pub struct XORRegInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl XORRegInstr {
+    pub fn new(opc: u16) -> XORRegInstr {
+        XORRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for XORRegInstr {
+    fn repr(&self) -> String {
+        format!("XOR V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        c8.v_regs[self.vx as usize] ^= c8.v_regs[self.vy as usize];
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct AddRegInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl AddRegInstr {
+    pub fn new(opc: u16) -> AddRegInstr {
+        AddRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for AddRegInstr {
+    fn repr(&self) -> String {
+        format!("ADD V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let x = c8.v_regs[self.vx as usize];
+        let y = c8.v_regs[self.vy as usize];
+
+        c8.v_regs[self.vx as usize].wrapping_add(y);
+
+        if ((x as u16) + (y as u16)) > 0xFF {
+            c8.v_regs[15] = 1;
+            //TODO: clear carry if this doesn't happen?
+        }
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct SubRegInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl SubRegInstr {
+    pub fn new(opc: u16) -> SubRegInstr {
+        SubRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for SubRegInstr {
+    fn repr(&self) -> String {
+        format!("SUB V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let x = c8.v_regs[self.vx as usize];
+        let y = c8.v_regs[self.vy as usize];
+
+        c8.v_regs[self.vx as usize].wrapping_sub(y);
+
+        if x > y {
+            c8.v_regs[15] = 1;
+            //TODO: clear carry if this doesn't happen?
+        }
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct SubNRegInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+}
+
+impl SubNRegInstr {
+    pub fn new(opc: u16) -> SubNRegInstr {
+        SubNRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+        }
+    }
+}
+
+impl Instr for SubNRegInstr {
+    fn repr(&self) -> String {
+        format!("SUB V{}, V{}", self.vx, self.vy)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let x = c8.v_regs[self.vx as usize];
+        let y = c8.v_regs[self.vy as usize];
+
+        c8.v_regs[self.vx as usize] = y.wrapping_sub(x);
+
+        if y > x {
+            c8.v_regs[15] = 1;
+            //TODO: clear carry if this doesn't happen?
+        }
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct ShrRegInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl ShrRegInstr {
+    pub fn new(opc: u16) -> ShrRegInstr {
+        ShrRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for ShrRegInstr {
+    fn repr(&self) -> String {
+        format!("SHR V{}", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let x = c8.v_regs[self.vx as usize];
+        c8.v_regs[15] = x & 1;
+        c8.v_regs[self.vx as usize] /= 2;        
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
+pub struct ShlNRegInstr {
+    core: InstrCore,
+    vx: u8,
+}
+
+impl ShlNRegInstr {
+    pub fn new(opc: u16) -> ShlNRegInstr {
+        ShlNRegInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            vx: op_to_vx(opc),
+        }
+    }
+}
+
+impl Instr for ShlNRegInstr {
+    fn repr(&self) -> String {
+        format!("SHL V{}", self.vx)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        let x = c8.v_regs[self.vx as usize];
+        c8.v_regs[15] = x >> 7;
+        c8.v_regs[self.vx as usize] *= 2;        
+    }
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
 pub struct LoadIInstr {
     core: InstrCore,
     nnn: u16,
