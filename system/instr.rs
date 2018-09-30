@@ -475,7 +475,8 @@ impl Instr for AddRegInstr {
 
         if ((x as u16) + (y as u16)) > 0xFF {
             c8.v_regs[15] = 1;
-            //TODO: clear carry if this doesn't happen?
+        } else {
+            c8.v_regs[15] = 0;
         }
     }
 
