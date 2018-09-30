@@ -285,7 +285,7 @@ pub struct ClearDisplayInstr {
 impl ClearDisplayInstr {
     pub fn new(opc: u16) -> ClearDisplayInstr {
         ClearDisplayInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::Screen),
         }
     }
 }
