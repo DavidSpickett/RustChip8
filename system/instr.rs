@@ -822,15 +822,15 @@ impl Instr for DrawSpriteInstr {
         //Clear overlap flag
         c8.v_regs[15] = 0;
 
-        let x = c8.v_regs[self.vx as usize];
-        let y = c8.v_regs[self.vy as usize];
+        let x = c8.v_regs[self.vx as usize] as usize;
+        let y = c8.v_regs[self.vy as usize] as usize;
         let addr = c8.i_reg as usize;
         let sprite_data = &c8.memory[addr..addr+(self.n as usize)];
 
         for (y_offset, row) in sprite_data.iter().enumerate() {
             for sprite_x in (0..8).rev() {
-                let final_x = ((x+7-sprite_x) % 64) as usize;
-                let final_y = ((y as usize) + y_offset) % 32;
+                let final_x = (x+7-sprite_x) % 64;
+                let final_y = (y + y_offset) % 32;
                 let screen_idx = (final_y*64)+final_x;
 
                 let pixel_set = *row & (1 << sprite_x) != 0; 
