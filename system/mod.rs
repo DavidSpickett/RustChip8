@@ -135,7 +135,7 @@ impl Chip8System {
     }
 
     fn fetch(&mut self) -> u16 {
-        let opcode = ((self.memory[self.pc as usize] as u16) << 8) | (self.memory[(self.pc+1) as usize] as u16);
+        let opcode = (u16::from(self.memory[self.pc as usize]) << 8) | u16::from(self.memory[(self.pc+1) as usize]);
         self.pc += 2;
         opcode
     }

@@ -37,7 +37,7 @@ impl InstrCore {
     fn new(opc: u16, flags: InstrFlags) -> InstrCore {
         InstrCore {
             opcode: opc,
-            flags: flags,
+            flags,
         }
     }
 }
@@ -473,7 +473,7 @@ impl Instr for AddRegInstr {
 
         c8.v_regs[self.vx as usize].wrapping_add(y);
 
-        if ((x as u16) + (y as u16)) > 0xFF {
+        if (u16::from(x) + u16::from(y)) > 0xFF {
             c8.v_regs[15] = 1;
         } else {
             c8.v_regs[15] = 0;
@@ -719,7 +719,7 @@ impl Instr for AddIVInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.i_reg += c8.v_regs[self.vx as usize] as u16
+        c8.i_reg += u16::from(c8.v_regs[self.vx as usize])
     }
 
     fn get_opcode(&self) -> u16 {
@@ -1152,7 +1152,7 @@ impl Instr for JumpPlusVZeroInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.target + (c8.v_regs[0] as u16);
+        c8.pc = self.target + u16::from(c8.v_regs[0]);
     }
 
     fn get_opcode(&self) -> u16 {
@@ -1184,7 +1184,7 @@ impl Instr for GetDigitAddrInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        let digit = c8.v_regs[self.vx as usize] as u16;
+        let digit = u16::from(c8.v_regs[self.vx as usize]);
         c8.i_reg = digit*5;
     }
 
