@@ -25,7 +25,7 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let rom = String::from("INVADERS");
+    let rom = String::from("roms/INVADERS");
     let mut c8 = system::make_system(&rom);
 
     /*TODO: Hammer the instruction encodings!

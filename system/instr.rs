@@ -471,7 +471,7 @@ impl Instr for AddRegInstr {
         let x = c8.v_regs[self.vx as usize];
         let y = c8.v_regs[self.vy as usize];
 
-        c8.v_regs[self.vx as usize].wrapping_add(y);
+        c8.v_regs[self.vx as usize] = c8.v_regs[self.vx as usize].wrapping_add(y);
 
         if (u16::from(x) + u16::from(y)) > 0xFF {
             c8.v_regs[15] = 1;
