@@ -514,7 +514,7 @@ impl Instr for SubRegInstr {
         let x = c8.v_regs[self.vx as usize];
         let y = c8.v_regs[self.vy as usize];
 
-        c8.v_regs[self.vx as usize].wrapping_sub(y);
+        c8.v_regs[self.vx as usize] = x.wrapping_sub(y);
         c8.v_regs[15] = (x>y) as u8;
     }
 
@@ -545,7 +545,7 @@ impl SubNRegInstr {
 
 impl Instr for SubNRegInstr {
     fn repr(&self) -> String {
-        format!("SUB V{}, V{}", self.vx, self.vy)
+        format!("SUBN V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
