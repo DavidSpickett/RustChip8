@@ -2,6 +2,25 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
+use std::fs::File;
+use std::io::Read;
+
+mod test;
+
+pub fn read_rom(filename: &String) -> Vec<u8> {
+    let mut file = match File::open(filename) {
+        Err(why) => panic!("couldn't open ROM: {}",why.description()),
+        Ok(file) => file,
+    };
+
+    let mut contents = Vec::new();
+    match file.read_to_end(&mut contents) {
+        Err(_) => panic!("Error reading ROM file."),
+        Ok(_) => {}
+    }
+
+    contents
+}
 
 pub fn make_system(rom: Vec<u8>) -> Chip8System {
     let mut c = Chip8System::new();
@@ -49,6 +68,21 @@ impl Chip8System {
         }
     }
 
+    pub fn screen_to_str(&self) -> String {
+        let mut ret = String::from("");
+        let mut row = String::from("");
+        for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
+            if ((i % 64) == 0) &&  i != 0 { // TODO: make the screen a 2d array?
+                row.push('\n');
+                ret.push_str(&row);
+                row.clear();
+            }
+
+            if *pixel { row.push('@') } else { row.push('-') }
+        }
+        ret
+    }
+
     pub fn screen_to_file(&self) {
         let mut file = OpenOptions::new()
                         .write(true)
@@ -57,20 +91,9 @@ impl Chip8System {
                         .open("screen.txt")
                         .unwrap();
 
-        let mut row = String::from("");
-        for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
-            if ((i % 64) == 0) &&  i != 0 { // TODO: make the screen a 2d array?
-                row.push('\n');
-
-                if let Err(why) = file.write(row.as_bytes()) {
-                    panic!("couldn't write to screen dump!: {}",
-                        why.description())
-                };
-
-                row.clear();
-            }
-
-            if *pixel { row.push('@') } else { row.push('-') }
+        if let Err(why) = file.write(self.screen_to_str().as_bytes()) {
+            panic!("couldn't write to screen dump!: {}",
+                why.description())
         }
     }
 
@@ -231,15 +254,21 @@ impl Chip8System {
         }
 
         let opc = self.fetch();
-        self.get_opcode_obj(opc)
+        let instr = self.get_opcode_obj(opc);
+
+        // -2 because we already fetched beyond this instr
+        // Print this now because otherwise jumps won't look right
+        // You'll see the post jump PC, not the PC we fetched the
+        // jump from.
+        println!("0x{:04x} : 0x{:04x} : {}",
+                 self.pc-2, instr.get_opcode(), instr.repr());
+
+        instr
     }
 
     pub fn execute(&mut self, instr: &Box<Instr>) {
         //TODO: check that fetch and decode has been called
         instr.exec(self);
-        // -2 because we already fetched beyond this instr
-        println!("0x{:04x} : 0x{:04x} : {}",
-                 self.pc-2, instr.get_opcode(), instr.repr());
     }
 }
 
