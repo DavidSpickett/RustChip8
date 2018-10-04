@@ -8,6 +8,9 @@ use sdl2::keyboard::Scancode;
 use sdl2::rect::Rect;
 
 mod system;
+use system::make_system;
+use system::ROMProvider;
+use system::FileROMProvider;
 
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -25,8 +28,9 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let rom = String::from("roms/INVADERS");
-    let mut c8 = system::make_system(&rom);
+    let rom_name = String::from("roms/BC_test.ch8");
+    let p = Box::new(FileROMProvider::new(rom_name)) as Box<ROMProvider>;
+    let mut c8 = make_system(&p);
 
     /*TODO: Hammer the instruction encodings!
     for opcode in 0..0xFFFF {
