@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::path::Path;
+use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
@@ -51,11 +51,12 @@ impl Chip8System {
     }
 
     pub fn screen_to_file(&self) {
-        let path = Path::new("screen.txt");
-        let mut file = match File::create(&path) {
-            Err(why) => panic!("Couldn't create screen dump!: {}", why.description()),
-            Ok(file) => file,
-        };
+        let mut file = OpenOptions::new()
+                        .write(true)
+                        .truncate(true)
+                        .create(true)
+                        .open("screen.txt")
+                        .unwrap();
 
         let mut row = String::from("");
         for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
@@ -66,9 +67,11 @@ impl Chip8System {
                     panic!("couldn't write to screen dump!: {}",
                         why.description())
                 };
+
+                row.clear();
             }
 
-            if *pixel { row.push('*') } else { row.push(' ') }
+            if *pixel { row.push('@') } else { row.push('-') }
         }
     }
 
