@@ -8,5 +8,5 @@ sdl2 = "0.31"
 rand = "0.3.0"
 
 [[bin]]
-name = "RChip8"
+name = "rchip8"
 path = "main.rs"
