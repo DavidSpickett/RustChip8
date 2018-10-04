@@ -133,7 +133,11 @@ impl Chip8System {
         };
 
         let mut contents = Vec::new();
-        file.read_to_end(&mut contents).expect("Error reading ROM file.");
+        //file.read_to_end(&mut contents).expect("Error reading ROM file.");
+        match file.read_to_end(&mut contents) {
+            Err(_) => panic!("Error reading ROM file."),
+            Ok(_) => {}
+        }
         self.memory[0x200..0x200+contents.len()].clone_from_slice(&contents);
     }
 
