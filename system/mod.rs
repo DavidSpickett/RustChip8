@@ -68,6 +68,17 @@ impl Chip8System {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn reset_regs(&mut self) {
+        self.pc = 0x200;
+        self.v_regs = [0; 16];
+        self.i_reg = 0;
+        self.stack = [0; 16];
+        self.stack_ptr = 0;
+        self.delay_timer = 0;
+        self.sound_timer = 0;
+    }
+
     pub fn screen_to_str(&self) -> String {
         let mut ret = String::from("");
         let mut row = String::from("");
@@ -167,10 +178,7 @@ impl Chip8System {
                 match opcode & 0xFF {
                     0xE0 => Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>,
                     0xEE => Box::new(RetInstr::new(opcode)) as Box<Instr>,
-                    _ => {
-                        self.panic_unknown(opcode);
-                        panic!("");
-                    }
+                    _ =>    Box::new(SysInstr::new(opcode)) as Box<Instr>,
                 }
             }
             0x1 => Box::new(JumpInstr::new(opcode)) as Box<Instr>,

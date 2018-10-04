@@ -75,6 +75,36 @@ impl Instr for UndefInstr {
     }
 }
 
+pub struct SysInstr {
+    core: InstrCore,
+    target: u16,
+}
+
+impl SysInstr {
+    pub fn new(opc: u16) -> SysInstr {
+        SysInstr {
+            core: InstrCore::new(opc, InstrFlags::_None),
+            target: op_to_nnn(opc),
+        }
+    }
+}
+
+impl Instr for SysInstr {
+    fn repr(&self) -> String {
+        format!("SYS 0x{:03x}", self.target)
+    }
+
+    fn exec(&self, _c8: &mut Chip8System) {}
+
+    fn get_opcode(&self) -> u16 {
+        self.core.opcode
+    }
+
+    fn get_flags(&self) -> InstrFlags {
+        self.core.flags
+    }
+}
+
 pub struct CallInstr {
     core: InstrCore,
     target: u16,
