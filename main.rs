@@ -6,11 +6,27 @@ use sdl2::keyboard::Keycode;
 use sdl2::keyboard::Scancode;
 //use std::time::Duration;
 use sdl2::rect::Rect;
+use std::fs::File;
+use std::error::Error;
+use std::io::Read;
 
 mod system;
 use system::make_system;
-use system::ROMProvider;
-use system::FileROMProvider;
+
+fn read_rom(filename: &String) -> Vec<u8> {
+    let mut file = match File::open(filename) {
+        Err(why) => panic!("couldn't open ROM: {}",why.description()),
+        Ok(file) => file,
+    };
+
+    let mut contents = Vec::new();
+    match file.read_to_end(&mut contents) {
+        Err(_) => panic!("Error reading ROM file."),
+        Ok(_) => {}
+    }
+
+    contents
+}
 
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -29,8 +45,7 @@ pub fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     let rom_name = String::from("roms/BC_test.ch8");
-    let p = Box::new(FileROMProvider::new(rom_name)) as Box<ROMProvider>;
-    let mut c8 = make_system(&p);
+    let mut c8 = make_system(read_rom(&rom_name));
 
     /*TODO: Hammer the instruction encodings!
     for opcode in 0..0xFFFF {

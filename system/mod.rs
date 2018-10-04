@@ -1,47 +1,11 @@
 use std::fs::OpenOptions;
-use std::fs::File;
 use std::io::prelude::*;
 use std::error::Error;
 use system::instr::*;
 
-mod test;
-
-pub trait ROMProvider {
-    fn get(&self) -> Vec<u8>;
-}
-
-pub struct FileROMProvider {
-    filename: String,
-}
-
-impl FileROMProvider {
-    pub fn new(f: String) -> FileROMProvider {
-        FileROMProvider {
-            filename: f,
-        }
-    }
-}
-
-impl ROMProvider for FileROMProvider {
-    fn get(&self) -> Vec<u8> {
-        let mut file = match File::open(&self.filename) {
-            Err(why) => panic!("couldn't open ROM: {}",why.description()),
-            Ok(file) => file,
-        };
-
-        let mut contents = Vec::new();
-        match file.read_to_end(&mut contents) {
-            Err(_) => panic!("Error reading ROM file."),
-            Ok(_) => {}
-        }
-
-        contents
-    }
-}
-
-pub fn make_system(rom_provider: &Box<ROMProvider>) -> Chip8System {
+pub fn make_system(rom: Vec<u8>) -> Chip8System {
     let mut c = Chip8System::new();
-    c.init_memory(rom_provider);
+    c.init_memory(rom);
     c
 }
 
@@ -140,7 +104,7 @@ impl Chip8System {
         }
     }
 
-    fn init_memory(&mut self, rom: &Box<ROMProvider>) {
+    fn init_memory(&mut self, rom: Vec<u8>) {
         let font_data = [
                         0xF0, 0x90, 0x90, 0x90, 0xF0,  // Zero
                         0x20, 0x60, 0x20, 0x20, 0x70,  // One
@@ -161,9 +125,7 @@ impl Chip8System {
                         ];
 
         self.memory[..font_data.len()].clone_from_slice(&font_data);
-
-        let contents = rom.get();
-        self.memory[0x200..0x200+contents.len()].clone_from_slice(&contents);
+        self.memory[0x200..0x200+rom.len()].clone_from_slice(&rom);
     }
 
     fn fetch(&mut self) -> u16 {
