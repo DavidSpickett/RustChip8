@@ -172,6 +172,8 @@ impl Chip8System {
         panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2);
     }
 
+    // TODO: this should return a Result<Box<Instr>, E>
+    // that way the invalid instr test might be faster
     fn get_opcode_obj(&self, opcode: u16) -> Box<Instr>{
         match opcode >> 12 {
             0x0 => {
@@ -185,7 +187,15 @@ impl Chip8System {
             0x2 => Box::new(CallInstr::new(opcode)) as Box<Instr>,
             0x3 => Box::new(SkipEqualInstr::new(opcode)) as Box<Instr>,
             0x4 => Box::new(SkipNotEqualInstr::new(opcode)) as Box<Instr>,
-            0x5 => Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<Instr>,
+            0x5 => {
+                match opcode & 0xF {
+                    0 => Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<Instr>,
+                    _ => {
+                        self.panic_unknown(opcode);
+                        panic!("");
+                    }
+                }
+            }
             0x6 => Box::new(LoadByteInstr::new(opcode)) as Box<Instr>,
             0x7 => Box::new(AddByteInstr::new(opcode)) as Box<Instr>,
             0x8 => {
@@ -205,7 +215,15 @@ impl Chip8System {
                     }
                 }
             }
-            0x9 => Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>,
+            0x9 => {
+                match opcode & 0xF {
+                    0 => Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>,
+                    _ => {
+                        self.panic_unknown(opcode);
+                        panic!("");
+                    }
+                }
+            }
             0xA => Box::new(LoadIInstr::new(opcode)) as Box<Instr>,
             0xB => Box::new(JumpPlusVZeroInstr::new(opcode)) as Box<Instr>,
             0xC => Box::new(RandomInstr::new(opcode)) as Box<Instr>,

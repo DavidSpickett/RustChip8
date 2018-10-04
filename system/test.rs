@@ -2,6 +2,7 @@
 mod test {
     use system::*;
     use std::path::PathBuf;
+    use std::panic;
 
     #[test]
     fn run_bc_test_rom() {
@@ -117,6 +118,20 @@ mod test {
             c8.reset_regs();
             // This allows us to do a ret without having a corresponding call
             c8.stack_ptr = 1;
+        }
+    }
+
+    #[test]
+    fn all_invalid_chip8_should_panic() {
+        let all_instrs = all_valid_chip8_instrs();
+        let all_encodings: Vec<u16> = (0..0xFFFF_u16).collect();
+        let invalid_instrs = all_encodings.iter().filter(|x| !all_instrs.contains(x));
+
+        let dummy: Vec<u8> = vec![];
+        let c8 = make_system(dummy);
+        for i in invalid_instrs {
+            let res = panic::catch_unwind(|| c8.get_opcode_obj(*i));
+            assert!(res.is_err());
         }
     }
 
