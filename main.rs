@@ -27,8 +27,8 @@ pub fn main() {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let rom_name = String::from("roms/BC_test.ch8");
-    let mut c8 = make_system(read_rom(&rom_name));
+    let rom_name = String::from("roms/INVADERS");
+    let mut c8 = make_system(&read_rom(&rom_name));
 
     /*TODO: Hammer the instruction encodings!
     for opcode in 0..0xFFFF {

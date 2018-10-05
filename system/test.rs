@@ -9,7 +9,7 @@ mod test {
         let mut rom_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         rom_path.push("roms/BC_test.ch8");
         let rom_path_str = String::from(rom_path.to_str().expect("bad path!"));
-        let mut c8 = make_system(read_rom(&rom_path_str));
+        let mut c8 = make_system(&read_rom(&rom_path_str));
 
         let expected = "\
         ----------------------------------------------------------------\n\
@@ -106,7 +106,7 @@ mod test {
     fn do_all_valid_chip8_instr() {
         let instrs = all_valid_chip8_instrs();
         let dummy: Vec<u8> = vec![];
-        let mut c8 = make_system(dummy);
+        let mut c8 = make_system(&dummy);
 
         // Execute all instructions at 0x200, reset in between
         // So that something like JP to self doesn't hold up
@@ -132,7 +132,7 @@ mod test {
         let invalid_instrs = all_encodings.difference(&all_instrs);
 
         let dummy: Vec<u8> = vec![];
-        let c8 = make_system(dummy);
+        let c8 = make_system(&dummy);
         for i in invalid_instrs {
             let decode = c8.get_opcode_obj(*i);
             assert!(decode.is_err());

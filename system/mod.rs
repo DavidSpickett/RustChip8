@@ -7,7 +7,7 @@ use std::io::Read;
 
 mod test;
 
-pub fn read_rom(filename: &String) -> Vec<u8> {
+pub fn read_rom(filename: &str) -> Vec<u8> {
     let mut file = match File::open(filename) {
         Err(why) => panic!("couldn't open ROM: {}",why.description()),
         Ok(file) => file,
@@ -22,9 +22,9 @@ pub fn read_rom(filename: &String) -> Vec<u8> {
     contents
 }
 
-pub fn make_system(rom: Vec<u8>) -> Chip8System {
+pub fn make_system(rom: &[u8]) -> Chip8System {
     let mut c = Chip8System::new();
-    c.init_memory(rom);
+    c.init_memory(&rom);
     c
 }
 
@@ -138,7 +138,7 @@ impl Chip8System {
         }
     }
 
-    fn init_memory(&mut self, rom: Vec<u8>) {
+    fn init_memory(&mut self, rom: &[u8]) {
         let font_data = [
                         0xF0, 0x90, 0x90, 0x90, 0xF0,  // Zero
                         0x20, 0x60, 0x20, 0x20, 0x70,  // One
