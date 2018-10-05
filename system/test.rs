@@ -112,6 +112,9 @@ mod test {
         // So that something like JP to self doesn't hold up
         // the whole process
         for i in instrs.iter() {
+            // This allows us to do a ret without having a corresponding call
+            c8.stack_ptr = 1;
+
             let decode = c8.get_opcode_obj(*i);
             match decode {
                 Err(msg)  => panic!(msg),
@@ -120,8 +123,6 @@ mod test {
 
             // Prevent trying to call with a full stack etc.
             c8.reset_regs();
-            // This allows us to do a ret without having a corresponding call
-            c8.stack_ptr = 1;
         }
     }
 
@@ -136,6 +137,33 @@ mod test {
         for i in invalid_instrs {
             let decode = c8.get_opcode_obj(*i);
             assert!(decode.is_err());
+        }
+    }
+
+    fn setup_max_gp_regs(c8: &mut Chip8System) {
+        for r in c8.v_regs.iter_mut() {
+            *r = <u8>::max_value();
+        }
+    }
+
+    #[test]
+    fn all_chip8_instr_max_gp_reg_values() {
+        // This is just GP regs, we'll look at PC/stack_ptr/I seperatley
+        let valid_instrs = all_valid_chip8_instrs();
+
+        let dummy: Vec<u8> = vec![];
+        let mut c8 = make_system(&dummy);
+
+        for i in valid_instrs {
+            c8.reset_regs();
+            setup_max_gp_regs(&mut c8);
+            c8.stack_ptr = 1;
+
+            let instr = c8.get_opcode_obj(i).unwrap();
+            // Again we need to handle key index > 16 somehow, just not now
+            if instr.get_flags() != InstrFlags::Keys {
+                c8.execute(&instr);
+            }
         }
     }
 

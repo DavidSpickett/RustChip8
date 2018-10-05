@@ -28,7 +28,7 @@ pub fn make_system(rom: &[u8]) -> Chip8System {
     c
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum InstrFlags {
     _None,
     Screen,
