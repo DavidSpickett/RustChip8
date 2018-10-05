@@ -168,97 +168,77 @@ impl Chip8System {
         opcode
     }
 
-    fn panic_unknown(&self, opcode: u16) {
-        panic!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2);
+    fn format_unknown(&self, opcode: u16) -> String {
+        format!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2)
     }
 
-    // TODO: this should return a Result<Box<Instr>, E>
-    // that way the invalid instr test might be faster
-    fn get_opcode_obj(&self, opcode: u16) -> Box<Instr>{
+    fn get_opcode_obj(&self, opcode: u16) -> Result<Box<Instr>, String> {
         match opcode >> 12 {
             0x0 => {
                 match opcode & 0xFF {
-                    0xE0 => Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>,
-                    0xEE => Box::new(RetInstr::new(opcode)) as Box<Instr>,
-                    _ =>    Box::new(SysInstr::new(opcode)) as Box<Instr>,
+                    0xE0 => Ok(Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>),
+                    0xEE => Ok(Box::new(RetInstr::new(opcode))          as Box<Instr>),
+                    _ =>    Ok(Box::new(SysInstr::new(opcode))          as Box<Instr>),
                 }
             }
-            0x1 => Box::new(JumpInstr::new(opcode)) as Box<Instr>,
-            0x2 => Box::new(CallInstr::new(opcode)) as Box<Instr>,
-            0x3 => Box::new(SkipEqualInstr::new(opcode)) as Box<Instr>,
-            0x4 => Box::new(SkipNotEqualInstr::new(opcode)) as Box<Instr>,
+            0x1 => Ok(Box::new(JumpInstr::new(opcode))         as Box<Instr>),
+            0x2 => Ok(Box::new(CallInstr::new(opcode))         as Box<Instr>),
+            0x3 => Ok(Box::new(SkipEqualInstr::new(opcode))    as Box<Instr>),
+            0x4 => Ok(Box::new(SkipNotEqualInstr::new(opcode)) as Box<Instr>),
             0x5 => {
                 match opcode & 0xF {
-                    0 => Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<Instr>,
-                    _ => {
-                        self.panic_unknown(opcode);
-                        panic!("");
-                    }
+                    0 => Ok(Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<Instr>),
+                    _ => Err(self.format_unknown(opcode)),
                 }
             }
-            0x6 => Box::new(LoadByteInstr::new(opcode)) as Box<Instr>,
-            0x7 => Box::new(AddByteInstr::new(opcode)) as Box<Instr>,
+            0x6 => Ok(Box::new(LoadByteInstr::new(opcode)) as Box<Instr>),
+            0x7 => Ok(Box::new(AddByteInstr::new(opcode))  as Box<Instr>),
             0x8 => {
                 match opcode & 0xF {
-                    0x0 => Box::new(MovRegInstr::new(opcode)) as Box<Instr>,
-                    0x1 => Box::new(OrRegInstr::new(opcode)) as Box<Instr>,
-                    0x2 => Box::new(AndRegInstr::new(opcode)) as Box<Instr>,
-                    0x3 => Box::new(XORRegInstr::new(opcode)) as Box<Instr>,
-                    0x4 => Box::new(AddRegInstr::new(opcode)) as Box<Instr>,
-                    0x5 => Box::new(SubRegInstr::new(opcode)) as Box<Instr>,
-                    0x6 => Box::new(ShrRegInstr::new(opcode)) as Box<Instr>,
-                    0x7 => Box::new(SubNRegInstr::new(opcode)) as Box<Instr>,
-                    0xE => Box::new(ShlRegInstr::new(opcode)) as Box<Instr>,
-                    _ => {
-                        self.panic_unknown(opcode);
-                        panic!("");
-                    }
+                    0x0 => Ok(Box::new(MovRegInstr::new(opcode))  as Box<Instr>),
+                    0x1 => Ok(Box::new(OrRegInstr::new(opcode))   as Box<Instr>),
+                    0x2 => Ok(Box::new(AndRegInstr::new(opcode))  as Box<Instr>),
+                    0x3 => Ok(Box::new(XORRegInstr::new(opcode))  as Box<Instr>),
+                    0x4 => Ok(Box::new(AddRegInstr::new(opcode))  as Box<Instr>),
+                    0x5 => Ok(Box::new(SubRegInstr::new(opcode))  as Box<Instr>),
+                    0x6 => Ok(Box::new(ShrRegInstr::new(opcode))  as Box<Instr>),
+                    0x7 => Ok(Box::new(SubNRegInstr::new(opcode)) as Box<Instr>),
+                    0xE => Ok(Box::new(ShlRegInstr::new(opcode))  as Box<Instr>),
+                    _   => Err(self.format_unknown(opcode)),
                 }
             }
             0x9 => {
                 match opcode & 0xF {
-                    0 => Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>,
-                    _ => {
-                        self.panic_unknown(opcode);
-                        panic!("");
-                    }
+                    0 => Ok(Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>),
+                    _ => Err(self.format_unknown(opcode)),
                 }
             }
-            0xA => Box::new(LoadIInstr::new(opcode)) as Box<Instr>,
-            0xB => Box::new(JumpPlusVZeroInstr::new(opcode)) as Box<Instr>,
-            0xC => Box::new(RandomInstr::new(opcode)) as Box<Instr>,
-            0xD => Box::new(DrawSpriteInstr::new(opcode)) as Box<Instr>,
+            0xA => Ok(Box::new(LoadIInstr::new(opcode))         as Box<Instr>),
+            0xB => Ok(Box::new(JumpPlusVZeroInstr::new(opcode)) as Box<Instr>),
+            0xC => Ok(Box::new(RandomInstr::new(opcode))        as Box<Instr>),
+            0xD => Ok(Box::new(DrawSpriteInstr::new(opcode))    as Box<Instr>),
             0xE => {
                 match opcode & 0xFF {
-                    0x9E => Box::new(SkipKeyIfPressedInstr::new(opcode)) as Box<Instr>,
-                    0xA1 => Box::new(SkipKeyIfNotPressedInstr::new(opcode)) as Box<Instr>,
-                    _ => {
-                        self.panic_unknown(opcode);
-                        panic!("");
-                    }
+                    0x9E => Ok(Box::new(SkipKeyIfPressedInstr::new(opcode))    as Box<Instr>),
+                    0xA1 => Ok(Box::new(SkipKeyIfNotPressedInstr::new(opcode)) as Box<Instr>),
+                    _    => Err(self.format_unknown(opcode)),
                 }
             }
             0xF => {
                 match opcode & 0xFF {
-                    0x07 => Box::new(GetDelayTimerInstr::new(opcode)) as Box<Instr>,
-                    0x0A => Box::new(WaitForKeyInstr::new(opcode)) as Box<Instr>,
-                    0x15 => Box::new(SetDelayTimerInstr::new(opcode)) as Box<Instr>,
-                    0x18 => Box::new(SetSoundTimerInstr::new(opcode)) as Box<Instr>,
-                    0x1E => Box::new(AddIVInstr::new(opcode)) as Box<Instr>, 
-                    0x29 => Box::new(GetDigitAddrInstr::new(opcode)) as Box<Instr>,
-                    0x33 => Box::new(StoreBCDInstr::new(opcode)) as Box<Instr>,
-                    0x55 => Box::new(WriteRegsToMemInstr::new(opcode)) as Box<Instr>,
-                    0x65 => Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>,
-                    _ => {
-                        self.panic_unknown(opcode);
-                        panic!("");
-                    }
+                    0x07 => Ok(Box::new(GetDelayTimerInstr::new(opcode))   as Box<Instr>),
+                    0x0A => Ok(Box::new(WaitForKeyInstr::new(opcode))      as Box<Instr>),
+                    0x15 => Ok(Box::new(SetDelayTimerInstr::new(opcode))   as Box<Instr>),
+                    0x18 => Ok(Box::new(SetSoundTimerInstr::new(opcode))   as Box<Instr>),
+                    0x1E => Ok(Box::new(AddIVInstr::new(opcode))           as Box<Instr>),
+                    0x29 => Ok(Box::new(GetDigitAddrInstr::new(opcode))    as Box<Instr>),
+                    0x33 => Ok(Box::new(StoreBCDInstr::new(opcode))        as Box<Instr>),
+                    0x55 => Ok(Box::new(WriteRegsToMemInstr::new(opcode))  as Box<Instr>),
+                    0x65 => Ok(Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>),
+                    _    => Err(self.format_unknown(opcode)),
                 }
             }
-            _ => {
-                self.panic_unknown(opcode);
-                panic!("");
-            }
+            _ => Err(self.format_unknown(opcode)),
         }
     }
 
@@ -280,16 +260,20 @@ impl Chip8System {
         }
 
         let opc = self.fetch();
-        let instr = self.get_opcode_obj(opc);
+        let decode = self.get_opcode_obj(opc);
+        match decode {
+            Ok(instr) => {
+                // -2 because we already fetched beyond this instr
+                // Print this now because otherwise jumps won't look right
+                // You'll see the post jump PC, not the PC we fetched the
+                // jump from.
+                println!("0x{:04x} : 0x{:04x} : {}",
+                         self.pc-2, instr.get_opcode(), instr.repr());
 
-        // -2 because we already fetched beyond this instr
-        // Print this now because otherwise jumps won't look right
-        // You'll see the post jump PC, not the PC we fetched the
-        // jump from.
-        println!("0x{:04x} : 0x{:04x} : {}",
-                 self.pc-2, instr.get_opcode(), instr.repr());
-
-        instr
+                instr
+            }
+            Err(msg) => panic!(msg),
+        }
     }
 
     pub fn execute(&mut self, instr: &Box<Instr>) {

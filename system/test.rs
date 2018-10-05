@@ -2,7 +2,7 @@
 mod test {
     use system::*;
     use std::path::PathBuf;
-    use std::panic;
+    use std::collections::HashSet;
 
     #[test]
     fn run_bc_test_rom() {
@@ -112,8 +112,12 @@ mod test {
         // So that something like JP to self doesn't hold up
         // the whole process
         for i in instrs.iter() {
-            let ins = c8.get_opcode_obj(*i);
-            c8.execute(&ins);
+            let decode = c8.get_opcode_obj(*i);
+            match decode {
+                Err(msg)  => panic!(msg),
+                Ok(instr) => c8.execute(&instr),
+            }
+
             // Prevent trying to call with a full stack etc.
             c8.reset_regs();
             // This allows us to do a ret without having a corresponding call
@@ -123,15 +127,15 @@ mod test {
 
     #[test]
     fn all_invalid_chip8_should_panic() {
-        let all_instrs = all_valid_chip8_instrs();
-        let all_encodings: Vec<u16> = (0..0xFFFF_u16).collect();
-        let invalid_instrs = all_encodings.iter().filter(|x| !all_instrs.contains(x));
+        let all_instrs: HashSet<u16> = all_valid_chip8_instrs().into_iter().collect();
+        let all_encodings: HashSet<u16> = (0..0xFFFF_u16).collect();
+        let invalid_instrs = all_encodings.difference(&all_instrs);
 
         let dummy: Vec<u8> = vec![];
         let c8 = make_system(dummy);
         for i in invalid_instrs {
-            let res = panic::catch_unwind(|| c8.get_opcode_obj(*i));
-            assert!(res.is_err());
+            let decode = c8.get_opcode_obj(*i);
+            assert!(decode.is_err());
         }
     }
 
