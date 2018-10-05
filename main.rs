@@ -30,10 +30,6 @@ pub fn main() {
     let rom_name = String::from("roms/INVADERS");
     let mut c8 = make_system(&read_rom(&rom_name));
 
-    /*TODO: Hammer the instruction encodings!
-    for opcode in 0..0xFFFF {
-    }*/
-
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
