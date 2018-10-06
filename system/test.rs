@@ -223,6 +223,53 @@ mod test {
         c8.execute(&ins);
     }
 
+    #[test]
+    fn valid_key_indexes() {
+        // Key numbers 0-15 should not panic
+
+        let dummy: Vec<u8> = vec![];
+        let mut c8 = make_system(&dummy);
+        // Both using V0
+        let instrs: Vec<u16> = vec![0xE09E, 0xE0A1];
+
+        for key in 0..16_u8 {
+            c8.v_regs[0] = key;
+            for instr in instrs.iter() {
+                let decode = c8.get_opcode_obj(*instr);
+                match decode {
+                    Err(msg)  => panic!(msg),
+                    Ok(instr) => c8.execute(&instr),
+                }
+            }
+        }
+    }
+
+    fn setup_invalid_key_test() -> Chip8System {
+        let rom: Vec<u8> = vec![0xE0, 0x9E, 0xE0, 0xA1];
+        make_system(&rom)
+    }
+
+    #[test]
+    #[should_panic(expected="Key number 16 out of range!")]
+    fn invalid_key_index_if_pressed() {
+        // Key numbers >=16 should panic
+        let mut c8 = setup_invalid_key_test();
+        c8.v_regs[0] = 16; // TODO: check > 16 too
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
+    #[test]
+    #[should_panic(expected="Key number 16 out of range!")]
+    fn invalid_key_index_if_not_pressed() {
+        // Key numbers >=16 should panic
+        let mut c8 = setup_invalid_key_test();
+        c8.v_regs[0] = 16; // TODO: check > 16 too
+        c8.pc += 2; // Skip to if not instr
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
     fn randomise_regs(c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();
         for r in c8.v_regs.iter_mut() {
@@ -239,8 +286,10 @@ mod test {
 
         'running: loop {
             for i in valid_instrs.iter() {
-                if (*i == 0x00EE) ||   // RET
-                   ((*i >> 12) == 0x2) // CALL
+                if (*i == 0x00EE) ||            // RET
+                   ((*i >> 12) == 0x2) ||       // CALL
+                   ((*i & 0xF0FF) == 0xE09E) || // SKP
+                   ((*i & 0xF0FF) == 0xE0A1)    // SKNP
                    {
                        continue;
                    }

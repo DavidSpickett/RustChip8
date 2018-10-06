@@ -111,6 +111,13 @@ impl Chip8System {
         }
     }
 
+    pub fn get_keystate(&self, idx: u8) -> bool {
+        if idx >= 16 {
+            panic!("Key number {} out of range!", idx);
+        }
+        self.keys[idx as usize]
+    }
+
     #[allow(dead_code)]
     fn dump(&self) {
         println!("----- Chip8 State -----");
@@ -275,7 +282,6 @@ impl Chip8System {
     pub fn execute(&mut self, instr: &Box<Instr>) {
         //TODO: check that fetch and decode has been called
         instr.exec(self);
-        self.dump();
     }
 }
 

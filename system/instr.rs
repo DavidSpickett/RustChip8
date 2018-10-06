@@ -908,8 +908,7 @@ impl Instr for SkipKeyIfPressedInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        let key_num = c8.v_regs[self.vx as usize] as usize;
-        if c8.keys[key_num] {
+        if c8.get_keystate(c8.v_regs[self.vx as usize]) {
             c8.pc += 2;
         }
     }
@@ -943,8 +942,7 @@ impl Instr for SkipKeyIfNotPressedInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        let key_num = c8.v_regs[self.vx as usize] as usize;
-        if !c8.keys[key_num] {
+        if !c8.get_keystate(c8.v_regs[self.vx as usize]) {
             c8.pc += 2;
         }
     }
