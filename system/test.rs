@@ -275,6 +275,7 @@ mod test {
         for r in c8.v_regs.iter_mut() {
             *r = rng.gen::<u8>();
         }
+        c8.i_reg = rng.gen::<u16>();
     }
 
     #[test]
@@ -284,12 +285,20 @@ mod test {
         let dummy: Vec<u8> = vec![];
         let mut c8 = make_system(&dummy);
 
+        let exceptions: Vec<u16> = vec![
+            0x00EE, // RET
+            0xE09E, // SKP
+            0xE0A1, // SKNP
+            // 0xF055, // LD [I], VX
+            // 0xF065, // LD VX, [I]
+            // 0xF033, // LD B, VX
+        ];
+
         'running: loop {
             for i in valid_instrs.iter() {
-                if (*i == 0x00EE) ||            // RET
-                   ((*i >> 12) == 0x2) ||       // CALL
-                   ((*i & 0xF0FF) == 0xE09E) || // SKP
-                   ((*i & 0xF0FF) == 0xE0A1)    // SKNP
+                if (exceptions.contains(&(*i & 0xF0FF)) ||
+                    (*i >> 12) == 0x2) || // CALL
+                   ((*i >> 12) == 0xD)    // DRW
                    {
                        continue;
                    }
