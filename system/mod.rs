@@ -7,6 +7,8 @@ use std::io::Read;
 
 mod test;
 
+const STACK_LIMIT: usize = 16;
+
 pub fn read_rom(filename: &str) -> Vec<u8> {
     let mut file = match File::open(filename) {
         Err(why) => panic!("couldn't open ROM: {}",why.description()),
@@ -45,7 +47,7 @@ pub struct Chip8System {
     pub pressed_key : usize,
     v_regs : [u8 ; 16],
     i_reg : u16,
-    stack : [u16 ; 16],
+    stack : [u16 ; STACK_LIMIT],
     stack_ptr : u8,
     delay_timer : u8,
     sound_timer : u8,
@@ -61,7 +63,7 @@ impl Chip8System {
             pressed_key: 0,
             v_regs: [0; 16],
             i_reg: 0,
-            stack: [0; 16],
+            stack: [0; STACK_LIMIT],
             stack_ptr: 0,
             delay_timer: 0,
             sound_timer: 0,
@@ -73,7 +75,7 @@ impl Chip8System {
         self.pc = 0x200;
         self.v_regs = [0; 16];
         self.i_reg = 0;
-        self.stack = [0; 16];
+        self.stack = [0; STACK_LIMIT];
         self.stack_ptr = 0;
         self.delay_timer = 0;
         self.sound_timer = 0;

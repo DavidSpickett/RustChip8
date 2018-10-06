@@ -167,4 +167,57 @@ mod test {
         }
     }
 
+    fn setup_nested_call_test() -> Chip8System {
+        // CALL 0x200
+        // call to self so we only need one
+        let instrs: Vec<u8> = vec![0x22, 0x00];
+        let mut c8 = make_system(&instrs);
+
+        // 1 off of the limit
+        for _ in 0..16 {
+            let ins = c8.fetch_and_decode();
+            c8.execute(&ins);
+        }
+        c8
+    }
+
+    // This is a weird way of making sure the setup functon doesn't
+    // panic. The test below will then check that the stack limit is enforced.
+    #[test]
+    fn call_to_full_stack() {
+        let _ = setup_nested_call_test();
+    }
+
+    #[test]
+    fn ret_to_empty_stack() {
+        let mut c8 = setup_nested_call_test();
+        let pc = 0x200;
+        // RET, since we just CALL 0x200 a lot, we'll ret to 0x200 each time
+        c8.memory[pc] = 0x00; c8.memory[pc+1] = 0xEE;
+
+        for _ in 0..16 {
+            let ins = c8.fetch_and_decode();
+            c8.execute(&ins);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "Stack is full!")]
+    fn stack_nested_calls_panics() {
+        let mut c8 = setup_nested_call_test();
+        // do the last CALL
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
+    #[test]
+    #[should_panic(expected = "Stack is empty!")]
+    fn ret_empty_stack_panics() {
+        // RET
+        let instrs: Vec<u8> = vec![0x00, 0xEE];
+        let mut c8 = make_system(&instrs);
+
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
 }
