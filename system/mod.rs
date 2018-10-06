@@ -170,9 +170,10 @@ impl Chip8System {
     fn get_opcode_obj(&self, opcode: u16) -> Result<Box<Instr>, String> {
         match opcode >> 12 {
             0x0 => {
-                match opcode & 0xFF {
-                    0xE0 => Ok(Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>),
-                    0xEE => Ok(Box::new(RetInstr::new(opcode))          as Box<Instr>),
+                match opcode & 0xFFF {
+                    // Note that these first two *must* begin with 0, as in 0x00E0
+                    0x0E0 => Ok(Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>),
+                    0x0EE => Ok(Box::new(RetInstr::new(opcode))          as Box<Instr>),
                     _ =>    Ok(Box::new(SysInstr::new(opcode))          as Box<Instr>),
                 }
             }
