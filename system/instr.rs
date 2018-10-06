@@ -125,8 +125,8 @@ impl Instr for CallInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.stack_ptr += 1;
         c8.stack[c8.stack_ptr as usize] = c8.pc;
+        c8.stack_ptr += 1;
         c8.pc = self.target;
     }
 
@@ -189,8 +189,8 @@ impl Instr for RetInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = c8.stack[c8.stack_ptr as usize];
         c8.stack_ptr -= 1;
+        c8.pc = c8.stack[c8.stack_ptr as usize];
     }
 
     fn get_opcode(&self) -> u16 {
