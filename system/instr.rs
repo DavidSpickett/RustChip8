@@ -125,12 +125,11 @@ impl Instr for CallInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        if c8.stack_ptr == 16 {
+        if c8.stack.len() == 16 {
             panic!("Stack is full!")
         }
 
-        c8.stack[c8.stack_ptr as usize] = c8.pc;
-        c8.stack_ptr += 1;
+        c8.stack.push(c8.pc);
         c8.pc = self.target;
     }
 
@@ -193,11 +192,10 @@ impl Instr for RetInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        if c8.stack_ptr == 0 {
+        if c8.stack.is_empty() {
             panic!("Stack is empty!");
         }
-        c8.stack_ptr -= 1;
-        c8.pc = c8.stack[c8.stack_ptr as usize];
+        c8.pc = c8.stack.pop().unwrap();
     }
 
     fn get_opcode(&self) -> u16 {

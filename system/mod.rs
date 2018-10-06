@@ -7,8 +7,6 @@ use std::io::Read;
 
 mod test;
 
-const STACK_LIMIT: usize = 16;
-
 pub fn read_rom(filename: &str) -> Vec<u8> {
     let mut file = match File::open(filename) {
         Err(why) => panic!("couldn't open ROM: {}",why.description()),
@@ -47,8 +45,7 @@ pub struct Chip8System {
     pub pressed_key : usize,
     v_regs : [u8 ; 16],
     i_reg : u16,
-    stack : [u16 ; STACK_LIMIT],
-    stack_ptr : u8,
+    stack : Vec<u16>,
     delay_timer : u8,
     sound_timer : u8,
 }
@@ -60,11 +57,10 @@ impl Chip8System {
             memory: [0; 0xFFFF],
             screen: [false; 64*32],
             keys: [false; 16],
+            stack: vec![],
             pressed_key: 0,
             v_regs: [0; 16],
             i_reg: 0,
-            stack: [0; STACK_LIMIT],
-            stack_ptr: 0,
             delay_timer: 0,
             sound_timer: 0,
         }
@@ -75,8 +71,7 @@ impl Chip8System {
         self.pc = 0x200;
         self.v_regs = [0; 16];
         self.i_reg = 0;
-        self.stack = [0; STACK_LIMIT];
-        self.stack_ptr = 0;
+        self.stack = vec![];
         self.delay_timer = 0;
         self.sound_timer = 0;
     }
@@ -129,13 +124,11 @@ impl Chip8System {
         }
         println!();
         println!("Stack:");
-        for (i, addr) in self.stack.iter().enumerate() {
-            print!("{:02}: 0x{:04x}", i, *addr);
-            
-            if i == (self.stack_ptr as usize) {
-                println!(" <<<");
-            } else {
-                println!();
+        if self.stack.is_empty() {
+            println!("<...>");
+        } else {
+            for (i, addr) in self.stack.iter().enumerate() {
+                println!("{:02}: 0x{:04x}", i, *addr);
             }
         }
     }
@@ -281,6 +274,7 @@ impl Chip8System {
     pub fn execute(&mut self, instr: &Box<Instr>) {
         //TODO: check that fetch and decode has been called
         instr.exec(self);
+        self.dump();
     }
 }
 

@@ -113,7 +113,7 @@ mod test {
         // the whole process
         for i in instrs.iter() {
             // This allows us to do a ret without having a corresponding call
-            c8.stack_ptr = 1;
+            c8.stack.push(0x200);
 
             let decode = c8.get_opcode_obj(*i);
             match decode {
@@ -157,7 +157,7 @@ mod test {
         for i in valid_instrs {
             c8.reset_regs();
             setup_max_gp_regs(&mut c8);
-            c8.stack_ptr = 1;
+            c8.stack.push(0x200);
 
             let instr = c8.get_opcode_obj(i).unwrap();
             // Again we need to handle key index > 16 somehow, just not now
