@@ -754,7 +754,8 @@ impl Instr for AddIVInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.i_reg += u16::from(c8.v_regs[self.vx as usize])
+        c8.i_reg = c8.i_reg.wrapping_add(u16::from(c8.v_regs[self.vx as usize]))
+
     }
 
     fn get_opcode(&self) -> u16 {
