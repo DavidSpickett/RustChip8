@@ -3,6 +3,8 @@ mod test {
     use system::*;
     use std::path::PathBuf;
     use std::collections::HashSet;
+    extern crate rand;
+    use system::test::test::rand::Rng;
 
     #[test]
     fn run_bc_test_rom() {
@@ -219,5 +221,37 @@ mod test {
 
         let ins = c8.fetch_and_decode();
         c8.execute(&ins);
+    }
+
+    fn randomise_regs(c8: &mut Chip8System) {
+        let mut rng = rand::thread_rng();
+        for r in c8.v_regs.iter_mut() {
+            *r = rng.gen::<u8>();
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn fuzz_test () {
+        let valid_instrs = all_valid_chip8_instrs();
+        let dummy: Vec<u8> = vec![];
+        let mut c8 = make_system(&dummy);
+
+        'running: loop {
+            for i in valid_instrs.iter() {
+                if (*i == 0x00EE) ||   // RET
+                   ((*i >> 12) == 0x2) // CALL
+                   {
+                       continue;
+                   }
+                println!("0x{:04x}", *i);
+                randomise_regs(&mut c8);
+                let decode = c8.get_opcode_obj(*i);
+                match decode {
+                    Err(msg)  => panic!(msg),
+                    Ok(instr) => c8.execute(&instr),
+                }
+            }
+        }
     }
 }
