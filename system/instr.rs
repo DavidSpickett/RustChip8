@@ -620,6 +620,7 @@ impl Instr for SubNRegInstr {
 pub struct ShrRegInstr {
     core: InstrCore,
     vx: u8,
+    // Docs indicate Vy but it isn't actually used
 }
 
 impl ShrRegInstr {
@@ -628,6 +629,10 @@ impl ShrRegInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> ShrRegInstr {
+        ShrRegInstr::new(instr_builder::arg_x(0x8006, x))
     }
 }
 
@@ -657,6 +662,10 @@ impl ShlRegInstr {
             vx: op_to_vx(opc),
         }
     }
+
+    fn create(x: u8) -> ShlRegInstr {
+        ShlRegInstr::new(instr_builder::arg_x(0x800E, x))
+    }
 }
 
 impl Instr for ShlRegInstr {
@@ -684,6 +693,10 @@ impl LoadIInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             nnn: op_to_nnn(opc),
         }
+    }
+
+    fn create(target: u16) -> LoadIInstr {
+        LoadIInstr::new(instr_builder::arg_nnn(0xA000, target))
     }
 }
 
@@ -713,6 +726,10 @@ impl AddByteInstr {
             kk: op_to_kk(opc),
         }
     }
+
+    fn create(x: u8, kk: u8) -> AddByteInstr {
+        AddByteInstr::new(instr_builder::arg_x_kk(0x7000, x, kk))
+    }
 }
 
 impl Instr for AddByteInstr {
@@ -738,6 +755,10 @@ impl AddIVInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> AddIVInstr {
+        AddIVInstr::new(instr_builder::arg_x(0xF01E, x))
     }
 }
 
@@ -765,6 +786,10 @@ impl SetDelayTimerInstr {
             vx: op_to_vx(opc),
         }
     }
+
+    fn create(x: u8) -> SetDelayTimerInstr {
+        SetDelayTimerInstr::new(instr_builder::arg_x(0xF015, x))
+    }
 }
 
 impl Instr for SetDelayTimerInstr {
@@ -790,6 +815,10 @@ impl GetDelayTimerInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> GetDelayTimerInstr {
+        GetDelayTimerInstr::new(instr_builder::arg_x(0xF007, x))
     }
 }
 
@@ -820,6 +849,10 @@ impl DrawSpriteInstr {
             vy: op_to_vy(opc),
             n: (opc & 0xF) as u8,
         }
+    }
+
+    fn create(x: u8, y: u8, n: u8) -> DrawSpriteInstr {
+        DrawSpriteInstr::new(instr_builder::arg_x_y_n(0xD000, x, y, n))
     }
 }
 
@@ -869,6 +902,10 @@ impl SkipKeyIfPressedInstr {
             vx: op_to_vx(opc),
         }
     }
+
+    fn create(x: u8) -> SkipKeyIfPressedInstr {
+        SkipKeyIfPressedInstr::new(instr_builder::arg_x(0xE09E, x))
+    }
 }
 
 impl Instr for SkipKeyIfPressedInstr {
@@ -897,6 +934,10 @@ impl SkipKeyIfNotPressedInstr {
             vx: op_to_vx(opc),
         }
     }
+
+    fn create(x: u8) -> SkipKeyIfNotPressedInstr {
+        SkipKeyIfNotPressedInstr::new(instr_builder::arg_x(0xE0A1, x))
+    }
 }
 
 impl Instr for SkipKeyIfNotPressedInstr {
@@ -924,6 +965,10 @@ impl ReadRegsFromMemInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> ReadRegsFromMemInstr {
+        ReadRegsFromMemInstr::new(instr_builder::arg_x(0xF065, x))
     }
 }
 
@@ -954,6 +999,10 @@ impl WriteRegsToMemInstr {
             vx: op_to_vx(opc),
         }
     }
+
+    fn create(x: u8) -> WriteRegsToMemInstr {
+        WriteRegsToMemInstr::new(instr_builder::arg_x(0xF055, x))
+    }
 }
 
 impl Instr for WriteRegsToMemInstr {
@@ -983,6 +1032,10 @@ impl SetSoundTimerInstr {
             vx: op_to_vx(opc),
         }
     }
+
+    fn create(x: u8) -> SetSoundTimerInstr {
+        SetSoundTimerInstr::new(instr_builder::arg_x(0xF018, x))
+    }
 }
 
 impl Instr for SetSoundTimerInstr {
@@ -1010,6 +1063,10 @@ impl RandomInstr {
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
+    }
+
+    fn create(x: u8, kk: u8) -> RandomInstr {
+        RandomInstr::new(instr_builder::arg_x_kk(0xC000, x, kk))
     }
 }
 
@@ -1040,6 +1097,10 @@ impl SkipIfRegsEqualInstr {
             vy: op_to_vy(opc),
         }
     }
+
+    fn create(x: u8, y: u8) -> SkipIfRegsEqualInstr {
+        SkipIfRegsEqualInstr::new(instr_builder::arg_x_y(0x5000, x, y))
+    }
 }
 
 impl Instr for SkipIfRegsEqualInstr {
@@ -1069,6 +1130,10 @@ impl SkipIfRegsNotEqualInstr {
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
+    }
+
+    fn create(x: u8, y: u8) -> SkipIfRegsNotEqualInstr {
+        SkipIfRegsNotEqualInstr::new(instr_builder::arg_x_y(0x9000, x, y))
     }
 }
 
