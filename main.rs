@@ -11,6 +11,73 @@ mod system;
 use system::make_system;
 use system::read_rom;
 
+#[allow(dead_code)]
+fn screen_to_pixels(screen: [bool; 64*32]) -> Vec<Vec<u8>> {
+    let mut ret: Vec<Vec<u8>> = vec![];
+    let mut row: Vec<u8> = vec![];
+    for (idx, pixel) in screen.iter().enumerate() {
+        if (idx != 0) && ((idx % 64) == 0) {
+            ret.push(row.clone());
+            row.clear();
+        }
+        if *pixel {
+            row.push(255);
+        } else {
+            row.push(0);
+        }
+    }
+    ret
+}
+
+#[allow(dead_code)]
+fn apply_blur(pixels: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+    let strength = 20; // Amount of blur
+    let mut new_pixels = pixels.clone();
+    for (y, row) in pixels.iter().enumerate() {
+        for (x, v) in row.iter().enumerate() {
+            // Each lit pixel will bleed some light to the surrounding pixels
+            if *v == 255 {
+                // Apply bleed to surrounding pixels
+                let co_ords: Vec<(usize, usize)> = vec![
+                    (y.saturating_sub(1), x),
+                    (y+1,                 x),
+                    (y,                   x.saturating_sub(1)),
+                    (y,                   x+1),
+                    (y.saturating_sub(1), x.saturating_sub(1)),
+                    (y.saturating_sub(1), x+1),
+                    (y+1,                 x.saturating_sub(1)),
+                    (y+1,                 x+1),
+                ];
+
+                for (y, x) in co_ords {
+                    if (x < pixels[0].len()) &&
+                       (y < pixels.len()) {
+                        new_pixels[y][x] = new_pixels[y][x].saturating_add(strength);
+                    }
+                }
+            }
+        }
+    }
+    new_pixels
+}
+
+#[allow(dead_code)]
+fn scale_pixels(pixels: Vec<Vec<u8>>, scaling_factor: i32) -> Vec<Vec<u8>> {
+    let mut new_pixels: Vec<Vec<u8>> = vec![];
+    for row in pixels.iter() {
+        let mut new_row: Vec<u8> = vec![];
+        for pixel in row.iter() {
+            for _ in 0..scaling_factor {
+                new_row.push(*pixel);
+            }
+        }
+        for _ in 0..scaling_factor {
+            new_pixels.push(new_row.clone());
+        }
+    }
+    new_pixels
+}
+
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -97,6 +164,22 @@ pub fn main() {
 
         match flags {
             system::InstrFlags::Screen => {
+                /*
+                // Slow path with blur effect
+                let pixels = scale_pixels(apply_blur(screen_to_pixels(c8.screen)), pixel_size);
+                
+                for (y, row) in pixels.iter().enumerate() {
+                    for (x, pixel) in row.iter().enumerate() {
+                        canvas.set_draw_color(Color::RGB(0, *pixel, 0));
+                        //Since set_pixel doesn't appear to be avaiable
+                        if let Err(why) = canvas.fill_rect(
+                            Rect::new(x as i32, y as i32, 1, 1)) {
+                            panic!("Couldn't draw!: {}", why);
+                        }
+                    }
+                }
+                */
+
                 canvas.set_draw_color(Color::RGB(0, 0, 0));
                 canvas.clear();
 
