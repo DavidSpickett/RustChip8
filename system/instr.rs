@@ -42,6 +42,13 @@ impl InstrCore {
     }
 }
 
+macro_rules! impl_instr {
+    () => (
+        fn get_opcode(&self) -> u16 { self.core.opcode }
+        fn get_flags(&self) -> InstrFlags { self.core.flags}
+    )
+}
+
 #[allow(dead_code)]
 pub struct UndefInstr {
     core: InstrCore,
@@ -60,19 +67,13 @@ impl UndefInstr {
 
 #[allow(dead_code)]
 impl Instr for UndefInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         self.message.to_string()
     }
 
     fn exec(&self, _c8: &mut Chip8System) {}
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
-    }
 }
 
 pub struct SysInstr {
@@ -90,19 +91,13 @@ impl SysInstr {
 }
 
 impl Instr for SysInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SYS 0x{:03x}", self.target)
     }
 
     fn exec(&self, _c8: &mut Chip8System) {}
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
-    }
 }
 
 pub struct CallInstr {
@@ -120,6 +115,8 @@ impl CallInstr {
 }
 
 impl Instr for CallInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("CALL 0x{:03x}", self.target)
     }
@@ -131,14 +128,6 @@ impl Instr for CallInstr {
 
         c8.stack.push(c8.pc);
         c8.pc = self.target;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -157,20 +146,14 @@ impl JumpInstr {
 }
 
 impl Instr for JumpInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("JP 0x{:03x}", self.target)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.pc = self.target;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -187,6 +170,8 @@ impl RetInstr {
 }
 
 impl Instr for RetInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         "RET".to_string()
     }
@@ -196,14 +181,6 @@ impl Instr for RetInstr {
             panic!("Stack is empty!");
         }
         c8.pc = c8.stack.pop().unwrap();
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -224,6 +201,8 @@ impl SkipEqualInstr {
 }
 
 impl Instr for SkipEqualInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SE V{}, 0x{:02x}", self.vx, self.kk)
     }
@@ -232,14 +211,6 @@ impl Instr for SkipEqualInstr {
         if c8.v_regs[self.vx as usize] == self.kk {
             c8.pc += 2;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -260,6 +231,8 @@ impl SkipNotEqualInstr {
 }
 
 impl Instr for SkipNotEqualInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SNE V{}, 0x{:02x}", self.vx, self.kk)
     }
@@ -268,14 +241,6 @@ impl Instr for SkipNotEqualInstr {
         if c8.v_regs[self.vx as usize] != self.kk {
             c8.pc +=2;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -296,20 +261,14 @@ impl LoadByteInstr {
 }
 
 impl Instr for LoadByteInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = self.kk;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -326,6 +285,8 @@ impl ClearDisplayInstr {
 }
 
 impl Instr for ClearDisplayInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         String::from("CLS")
     }
@@ -334,14 +295,6 @@ impl Instr for ClearDisplayInstr {
         for p in c8.screen.iter_mut() {
             *p = false;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -362,20 +315,14 @@ impl MovRegInstr {
 }
 
 impl Instr for MovRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = c8.v_regs[self.vy as usize];
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -396,20 +343,14 @@ impl OrRegInstr {
 }
 
 impl Instr for OrRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("OR V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] |= c8.v_regs[self.vy as usize];
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -430,20 +371,14 @@ impl AndRegInstr {
 }
 
 impl Instr for AndRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("AND V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] &= c8.v_regs[self.vy as usize];
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -464,20 +399,14 @@ impl XORRegInstr {
 }
 
 impl Instr for XORRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("XOR V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] ^= c8.v_regs[self.vy as usize];
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -498,6 +427,8 @@ impl AddRegInstr {
 }
 
 impl Instr for AddRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("ADD V{}, V{}", self.vx, self.vy)
     }
@@ -513,14 +444,6 @@ impl Instr for AddRegInstr {
         } else {
             c8.v_regs[15] = 0;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -541,6 +464,8 @@ impl SubRegInstr {
 }
 
 impl Instr for SubRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SUB V{}, V{}", self.vx, self.vy)
     }
@@ -551,14 +476,6 @@ impl Instr for SubRegInstr {
 
         c8.v_regs[self.vx as usize] = x.wrapping_sub(y);
         c8.v_regs[15] = (x>y) as u8;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -579,6 +496,8 @@ impl SubNRegInstr {
 }
 
 impl Instr for SubNRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SUBN V{}, V{}", self.vx, self.vy)
     }
@@ -589,14 +508,6 @@ impl Instr for SubNRegInstr {
 
         c8.v_regs[self.vx as usize] = y.wrapping_sub(x);
         c8.v_regs[15] = (y>x) as u8;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -615,6 +526,8 @@ impl ShrRegInstr {
 }
 
 impl Instr for ShrRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SHR V{}", self.vx)
     }
@@ -623,14 +536,6 @@ impl Instr for ShrRegInstr {
         let x = c8.v_regs[self.vx as usize];
         c8.v_regs[15] = x & 1;
         c8.v_regs[self.vx as usize] >>= 1;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -649,6 +554,8 @@ impl ShlRegInstr {
 }
 
 impl Instr for ShlRegInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SHL V{}", self.vx)
     }
@@ -657,14 +564,6 @@ impl Instr for ShlRegInstr {
         let x = c8.v_regs[self.vx as usize];
         c8.v_regs[15] = x >> 7;
         c8.v_regs[self.vx as usize] <<= 1;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -683,20 +582,14 @@ impl LoadIInstr {
 }
 
 impl Instr for LoadIInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD I, 0x{:03x}", self.nnn)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.i_reg = self.nnn;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -717,20 +610,14 @@ impl AddByteInstr {
 }
 
 impl Instr for AddByteInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("ADD V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = c8.v_regs[self.vx as usize].wrapping_add(self.kk)
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -749,20 +636,14 @@ impl AddIVInstr {
 }
 
 impl Instr for AddIVInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("ADD I, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.i_reg = c8.i_reg.wrapping_add(u16::from(c8.v_regs[self.vx as usize]))
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -781,20 +662,14 @@ impl SetDelayTimerInstr {
 }
 
 impl Instr for SetDelayTimerInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD DT, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.delay_timer = c8.v_regs[self.vx as usize]
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -813,20 +688,14 @@ impl GetDelayTimerInstr {
 }
 
 impl Instr for GetDelayTimerInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD V{}, DT", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = c8.delay_timer
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -849,6 +718,8 @@ impl DrawSpriteInstr {
 }
 
 impl Instr for DrawSpriteInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("DRW V{}, V{}, {}", self.vx, self.vy, self.n)
     }
@@ -878,14 +749,6 @@ impl Instr for DrawSpriteInstr {
             }
         }
     }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
-    }
 }
 
 pub struct SkipKeyIfPressedInstr {
@@ -903,6 +766,8 @@ impl SkipKeyIfPressedInstr {
 }
 
 impl Instr for SkipKeyIfPressedInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SKP V{}", self.vx)
     }
@@ -911,14 +776,6 @@ impl Instr for SkipKeyIfPressedInstr {
         if c8.get_keystate(c8.v_regs[self.vx as usize]) {
             c8.pc += 2;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -937,6 +794,8 @@ impl SkipKeyIfNotPressedInstr {
 }
 
 impl Instr for SkipKeyIfNotPressedInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SKNP V{}", self.vx)
     }
@@ -945,14 +804,6 @@ impl Instr for SkipKeyIfNotPressedInstr {
         if !c8.get_keystate(c8.v_regs[self.vx as usize]) {
             c8.pc += 2;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -971,6 +822,8 @@ impl ReadRegsFromMemInstr {
 }
 
 impl Instr for ReadRegsFromMemInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD V{}, [I]", self.vx)
     }
@@ -980,14 +833,6 @@ impl Instr for ReadRegsFromMemInstr {
         for reg_idx in 0..(self.vx+1) {
             c8.v_regs[reg_idx as usize] = c8.memory[addr+(reg_idx as usize)];
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1006,6 +851,8 @@ impl WriteRegsToMemInstr {
 }
 
 impl Instr for WriteRegsToMemInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD [I], V{}", self.vx)
     }
@@ -1015,14 +862,6 @@ impl Instr for WriteRegsToMemInstr {
         for reg_idx in 0..(self.vx+1) {
             c8.memory[addr+(reg_idx as usize)] = c8.v_regs[reg_idx as usize];
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1041,20 +880,14 @@ impl SetSoundTimerInstr {
 }
 
 impl Instr for SetSoundTimerInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD ST, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.sound_timer = c8.v_regs[self.vx as usize];
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1075,6 +908,8 @@ impl RandomInstr {
 }
 
 impl Instr for RandomInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("RND V{}, 0x{:02x}", self.vx, self.kk)
     }
@@ -1082,14 +917,6 @@ impl Instr for RandomInstr {
     fn exec(&self, c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();
         c8.v_regs[self.vx as usize] = self.kk & rng.gen::<u8>();
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1110,6 +937,8 @@ impl SkipIfRegsEqualInstr {
 }
 
 impl Instr for SkipIfRegsEqualInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SE V{}, V{}", self.vx, self.vy)
     }
@@ -1118,14 +947,6 @@ impl Instr for SkipIfRegsEqualInstr {
         if c8.v_regs[self.vx as usize] == c8.v_regs[self.vy as usize] {
             c8.pc += 2;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1146,6 +967,8 @@ impl SkipIfRegsNotEqualInstr {
 }
 
 impl Instr for SkipIfRegsNotEqualInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("SNE V{}, V{}", self.vx, self.vy)
     }
@@ -1154,14 +977,6 @@ impl Instr for SkipIfRegsNotEqualInstr {
         if c8.v_regs[self.vx as usize] != c8.v_regs[self.vy as usize] {
             c8.pc += 2;
         }
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1180,20 +995,14 @@ impl JumpPlusVZeroInstr {
 }
 
 impl Instr for JumpPlusVZeroInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("JP V0, 0x{:03x}", self.target)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.pc = self.target + u16::from(c8.v_regs[0]);
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1212,6 +1021,8 @@ impl GetDigitAddrInstr {
 }
 
 impl Instr for GetDigitAddrInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD F, V{}", self.vx)
     }
@@ -1219,14 +1030,6 @@ impl Instr for GetDigitAddrInstr {
     fn exec(&self, c8: &mut Chip8System) {
         let digit = u16::from(c8.v_regs[self.vx as usize]);
         c8.i_reg = digit*5;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
 
@@ -1245,6 +1048,8 @@ impl StoreBCDInstr {
 }
 
 impl Instr for StoreBCDInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD B, V{}", self.vx)
     }
@@ -1265,14 +1070,6 @@ impl Instr for StoreBCDInstr {
 
         c8.memory[addr] = value;
     }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
-    }
 }
 
 pub struct WaitForKeyInstr {
@@ -1290,19 +1087,13 @@ impl WaitForKeyInstr {
 }
 
 impl Instr for WaitForKeyInstr {
+    impl_instr!();
+
     fn repr(&self) -> String {
         format!("LD V{}, K", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = c8.pressed_key as u8;
-    }
-
-    fn get_opcode(&self) -> u16 {
-        self.core.opcode
-    }
-
-    fn get_flags(&self) -> InstrFlags {
-        self.core.flags
     }
 }
