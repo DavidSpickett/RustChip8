@@ -76,6 +76,15 @@ impl Chip8System {
         self.sound_timer = 0;
     }
 
+    pub fn bounds_check_i(&self, length: u8) -> usize {
+        let end = (self.i_reg as usize) + (length as usize);
+        if end >= self.memory.len() {
+            panic!("I register memory access at 0x{:04x} with length {} is out of bounds!",
+                   self.i_reg, length);
+        }
+        self.i_reg as usize
+    }
+
     pub fn screen_to_str(&self) -> String {
         let mut ret = String::from("");
         let mut row = String::from("");

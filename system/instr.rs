@@ -755,7 +755,6 @@ impl Instr for AddIVInstr {
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.i_reg = c8.i_reg.wrapping_add(u16::from(c8.v_regs[self.vx as usize]))
-
     }
 
     fn get_opcode(&self) -> u16 {
@@ -860,7 +859,7 @@ impl Instr for DrawSpriteInstr {
 
         let x = c8.v_regs[self.vx as usize] as usize;
         let y = c8.v_regs[self.vy as usize] as usize;
-        let addr = c8.i_reg as usize;
+        let addr = c8.bounds_check_i(self.n);
         let sprite_data = &c8.memory[addr..addr+(self.n as usize)];
 
         for (y_offset, row) in sprite_data.iter().enumerate() {
@@ -977,7 +976,7 @@ impl Instr for ReadRegsFromMemInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        let addr = c8.i_reg as usize;
+        let addr = c8.bounds_check_i(self.vx+1);
         for reg_idx in 0..(self.vx+1) {
             c8.v_regs[reg_idx as usize] = c8.memory[addr+(reg_idx as usize)];
         }
@@ -1012,7 +1011,7 @@ impl Instr for WriteRegsToMemInstr {
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        let addr = c8.i_reg as usize;
+        let addr = c8.bounds_check_i(self.vx+1);
         for reg_idx in 0..(self.vx+1) {
             c8.memory[addr+(reg_idx as usize)] = c8.v_regs[reg_idx as usize];
         }
@@ -1252,7 +1251,7 @@ impl Instr for StoreBCDInstr {
 
     fn exec(&self, c8: &mut Chip8System) {
         let mut value = c8.v_regs[self.vx as usize];
-        let mut addr = c8.i_reg as usize;
+        let mut addr = c8.bounds_check_i(3);
 
         let hundreds = value / 100;
         c8.memory[addr] = hundreds;

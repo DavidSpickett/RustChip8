@@ -270,6 +270,43 @@ mod test {
         c8.execute(&ins);
     }
 
+    fn setup_out_of_bounds_i_reg() -> Chip8System {
+        let rom: Vec<u8> = vec![
+            0xF0, 0x33, // Store BCD
+            0xF2, 0x55, // Store registers
+            0xF2, 0x65, // Load registers
+        ];
+        let mut c8 = make_system(&rom);
+        c8.i_reg = 0xFFFD;
+        c8
+    }
+
+    #[test]
+    #[should_panic(expected="I register memory access at 0xfffd with length 3 is out of bounds!")]
+    fn out_of_bounds_i_reg_bcd() {
+        let mut c8 = setup_out_of_bounds_i_reg();
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
+    #[test]
+    #[should_panic(expected="I register memory access at 0xfffd with length 3 is out of bounds!")]
+    fn out_of_bounds_i_reg_store_regs() {
+        let mut c8 = setup_out_of_bounds_i_reg();
+        c8.pc = 0x202;
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
+    #[test]
+    #[should_panic(expected="I register memory access at 0xfffd with length 3 is out of bounds!")]
+    fn out_of_bounds_i_reg_load_regs() {
+        let mut c8 = setup_out_of_bounds_i_reg();
+        c8.pc = 0x204;
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
     fn randomise_regs(c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();
         for r in c8.v_regs.iter_mut() {
@@ -289,9 +326,9 @@ mod test {
             0x00EE, // RET
             0xE09E, // SKP
             0xE0A1, // SKNP
-            // 0xF055, // LD [I], VX
-            // 0xF065, // LD VX, [I]
-            // 0xF033, // LD B, VX
+            0xF055, // LD [I], VX
+            0xF065, // LD VX, [I]
+            0xF033, // LD B, VX
         ];
 
         'running: loop {
