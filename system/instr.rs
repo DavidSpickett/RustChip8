@@ -4,6 +4,51 @@ use system::InstrFlags;
 extern crate rand;
 use system::instr::rand::Rng;
 
+mod instr_builder {
+    fn check_v_reg(num: u8, name: &str) {
+        if num >= 16 {
+            panic!("V{} cannot be >= 16 !", name);
+        }
+    }
+
+    pub fn no_args(base: u16) -> u16 {
+        base
+    }
+
+    pub fn arg_nnn(base: u16, target: u16) -> u16 {
+        if target > 0xFFF {
+            panic!("nnn cannot be > 0xFFF");
+        }
+        (base & 0xF000) | (target & 0x0FFF)
+    }
+
+    pub fn arg_x_kk(base: u16, x: u8, kk: u8) -> u16 {
+        check_v_reg(x, "X");
+        (base & 0xF000) | ((u16::from(x) & 0xF) << 8) | u16::from(kk)
+    }
+
+    pub fn arg_x_y(base: u16, x: u8, y: u8) -> u16 {
+        check_v_reg(x, "X");
+        check_v_reg(y, "Y");
+
+        (base & 0xF00F) | ((u16::from(x) & 0xF) << 8) | ((u16::from(y) & 0xF) << 4)
+    }
+
+    pub fn arg_x_y_n(base: u16, x: u8, y: u8, n: u8) -> u16 {
+        check_v_reg(x, "X");
+        check_v_reg(y, "Y");
+        if n >= 16 { panic!("n cannot be >= 16 !"); }
+
+        (base & 0xF000) | ((u16::from(x) & 0xF) << 8) | ((u16::from(y) & 0xF) << 4) |
+            (u16::from(n) & 0xF)
+    }
+
+    pub fn arg_x(base: u16, x: u8) -> u16 {
+        check_v_reg(x, "X");
+        (base & 0xF0FF) | ((u16::from(x) & 0xF) << 8)
+    }
+}
+
 fn op_to_kk(opcode: u16) -> u8 {
     (opcode & 0xFF) as u8
 }
@@ -88,6 +133,10 @@ impl SysInstr {
             target: op_to_nnn(opc),
         }
     }
+
+    fn create(target: u16) -> SysInstr {
+        SysInstr::new(instr_builder::arg_nnn(0x0000, target))
+    }
 }
 
 impl Instr for SysInstr {
@@ -111,6 +160,10 @@ impl CallInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             target: op_to_nnn(opc),
         }
+    }
+
+    fn create(target: u16) -> CallInstr {
+        CallInstr::new(instr_builder::arg_nnn(0x2000, target))
     }
 }
 
@@ -143,6 +196,10 @@ impl JumpInstr {
             target: op_to_nnn(opc),
         }
     }
+
+    fn create(target: u16) -> JumpInstr {
+        JumpInstr::new(instr_builder::arg_nnn(0x1000, target))
+    }
 }
 
 impl Instr for JumpInstr {
@@ -166,6 +223,10 @@ impl RetInstr {
         RetInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
         }
+    }
+
+    fn create() -> RetInstr {
+        RetInstr::new(instr_builder::no_args(0x00EE))
     }
 }
 
@@ -198,6 +259,10 @@ impl SkipEqualInstr {
             kk: op_to_kk(opc),
         }
     }
+
+    fn create(x: u8, kk: u8) -> SkipEqualInstr {
+        SkipEqualInstr::new(instr_builder::arg_x_kk(0x3000, x, kk))
+    }
 }
 
 impl Instr for SkipEqualInstr {
@@ -227,6 +292,10 @@ impl SkipNotEqualInstr {
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
+    }
+
+    fn create(x: u8, kk: u8) -> SkipNotEqualInstr {
+        SkipNotEqualInstr::new(instr_builder::arg_x_kk(0x4000, x, kk))
     }
 }
 
@@ -258,6 +327,10 @@ impl LoadByteInstr {
             kk: op_to_kk(opc),
         }
     }
+
+    fn create(x: u8, kk: u8) -> LoadByteInstr {
+        LoadByteInstr::new(instr_builder::arg_x_kk(0x6000, x, kk))
+    }
 }
 
 impl Instr for LoadByteInstr {
@@ -281,6 +354,10 @@ impl ClearDisplayInstr {
         ClearDisplayInstr {
             core: InstrCore::new(opc, InstrFlags::Screen),
         }
+    }
+
+    fn create() -> ClearDisplayInstr {
+        ClearDisplayInstr::new(instr_builder::no_args(0x00E0))
     }
 }
 
@@ -312,6 +389,10 @@ impl MovRegInstr {
             vy: op_to_vy(opc),
         }
     }
+
+    fn create(x: u8, y: u8) -> MovRegInstr {
+        MovRegInstr::new(instr_builder::arg_x_y(0x8000, x, y))
+    }
 }
 
 impl Instr for MovRegInstr {
@@ -340,6 +421,11 @@ impl OrRegInstr {
             vy: op_to_vy(opc),
         }
     }
+
+    fn create(x: u8, y: u8) -> OrRegInstr {
+        OrRegInstr::new(instr_builder::arg_x_y(0x8001, x, y))
+    }
+
 }
 
 impl Instr for OrRegInstr {
@@ -367,6 +453,10 @@ impl AndRegInstr {
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
+    }
+
+    fn create(x: u8, y: u8) -> AndRegInstr {
+        AndRegInstr::new(instr_builder::arg_x_y(0x8002, x, y))
     }
 }
 
@@ -396,6 +486,10 @@ impl XORRegInstr {
             vy: op_to_vy(opc),
         }
     }
+
+    fn create(x: u8, y: u8) -> XORRegInstr {
+        XORRegInstr::new(instr_builder::arg_x_y(0x8003, x, y))
+    }
 }
 
 impl Instr for XORRegInstr {
@@ -423,6 +517,10 @@ impl AddRegInstr {
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
+    }
+
+    fn create(x: u8, y: u8) -> AddRegInstr {
+        AddRegInstr::new(instr_builder::arg_x_y(0x8004, x, y))
     }
 }
 
@@ -461,6 +559,10 @@ impl SubRegInstr {
             vy: op_to_vy(opc),
         }
     }
+
+    fn create(x: u8, y: u8) -> SubRegInstr {
+        SubRegInstr::new(instr_builder::arg_x_y(0x8005, x, y))
+    }
 }
 
 impl Instr for SubRegInstr {
@@ -492,6 +594,10 @@ impl SubNRegInstr {
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
+    }
+
+    fn create(x: u8, y: u8) -> SubNRegInstr {
+        SubNRegInstr::new(instr_builder::arg_x_y(0x8007, x, y))
     }
 }
 
@@ -992,6 +1098,10 @@ impl JumpPlusVZeroInstr {
             target: op_to_nnn(opc),
         }
     }
+
+    fn create(target: u16) -> JumpPlusVZeroInstr {
+        JumpPlusVZeroInstr::new(instr_builder::arg_nnn(0xB000, target))
+    }
 }
 
 impl Instr for JumpPlusVZeroInstr {
@@ -1017,6 +1127,10 @@ impl GetDigitAddrInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> GetDigitAddrInstr {
+        GetDigitAddrInstr::new(instr_builder::arg_x(0xF029, x))
     }
 }
 
@@ -1044,6 +1158,10 @@ impl StoreBCDInstr {
             core: InstrCore::new(opc, InstrFlags::_None),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> StoreBCDInstr {
+        StoreBCDInstr::new(instr_builder::arg_x(0xF033, x))
     }
 }
 
@@ -1083,6 +1201,10 @@ impl WaitForKeyInstr {
             core: InstrCore::new(opc, InstrFlags::WaitKey),
             vx: op_to_vx(opc),
         }
+    }
+
+    fn create(x: u8) -> WaitForKeyInstr {
+        WaitForKeyInstr::new(instr_builder::arg_x(0xF00A, x))
     }
 }
 
