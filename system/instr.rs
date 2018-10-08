@@ -134,7 +134,7 @@ impl SysInstr {
         }
     }
 
-    fn create(target: u16) -> SysInstr {
+    pub fn create(target: u16) -> SysInstr {
         SysInstr::new(instr_builder::arg_nnn(0x0000, target))
     }
 }
@@ -162,7 +162,7 @@ impl CallInstr {
         }
     }
 
-    fn create(target: u16) -> CallInstr {
+    pub fn create(target: u16) -> CallInstr {
         CallInstr::new(instr_builder::arg_nnn(0x2000, target))
     }
 }
@@ -197,7 +197,7 @@ impl JumpInstr {
         }
     }
 
-    fn create(target: u16) -> JumpInstr {
+    pub fn create(target: u16) -> JumpInstr {
         JumpInstr::new(instr_builder::arg_nnn(0x1000, target))
     }
 }
@@ -225,7 +225,7 @@ impl RetInstr {
         }
     }
 
-    fn create() -> RetInstr {
+    pub fn create() -> RetInstr {
         RetInstr::new(instr_builder::no_args(0x00EE))
     }
 }
@@ -260,7 +260,7 @@ impl SkipEqualInstr {
         }
     }
 
-    fn create(x: u8, kk: u8) -> SkipEqualInstr {
+    pub fn create(x: u8, kk: u8) -> SkipEqualInstr {
         SkipEqualInstr::new(instr_builder::arg_x_kk(0x3000, x, kk))
     }
 }
@@ -294,7 +294,7 @@ impl SkipNotEqualInstr {
         }
     }
 
-    fn create(x: u8, kk: u8) -> SkipNotEqualInstr {
+    pub fn create(x: u8, kk: u8) -> SkipNotEqualInstr {
         SkipNotEqualInstr::new(instr_builder::arg_x_kk(0x4000, x, kk))
     }
 }
@@ -328,7 +328,7 @@ impl LoadByteInstr {
         }
     }
 
-    fn create(x: u8, kk: u8) -> LoadByteInstr {
+    pub fn create(x: u8, kk: u8) -> LoadByteInstr {
         LoadByteInstr::new(instr_builder::arg_x_kk(0x6000, x, kk))
     }
 }
@@ -356,7 +356,7 @@ impl ClearDisplayInstr {
         }
     }
 
-    fn create() -> ClearDisplayInstr {
+    pub fn create() -> ClearDisplayInstr {
         ClearDisplayInstr::new(instr_builder::no_args(0x00E0))
     }
 }
@@ -390,7 +390,7 @@ impl MovRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> MovRegInstr {
+    pub fn create(x: u8, y: u8) -> MovRegInstr {
         MovRegInstr::new(instr_builder::arg_x_y(0x8000, x, y))
     }
 }
@@ -422,7 +422,7 @@ impl OrRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> OrRegInstr {
+    pub fn create(x: u8, y: u8) -> OrRegInstr {
         OrRegInstr::new(instr_builder::arg_x_y(0x8001, x, y))
     }
 
@@ -455,7 +455,7 @@ impl AndRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> AndRegInstr {
+    pub fn create(x: u8, y: u8) -> AndRegInstr {
         AndRegInstr::new(instr_builder::arg_x_y(0x8002, x, y))
     }
 }
@@ -487,7 +487,7 @@ impl XORRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> XORRegInstr {
+    pub fn create(x: u8, y: u8) -> XORRegInstr {
         XORRegInstr::new(instr_builder::arg_x_y(0x8003, x, y))
     }
 }
@@ -519,7 +519,7 @@ impl AddRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> AddRegInstr {
+    pub fn create(x: u8, y: u8) -> AddRegInstr {
         AddRegInstr::new(instr_builder::arg_x_y(0x8004, x, y))
     }
 }
@@ -560,7 +560,7 @@ impl SubRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> SubRegInstr {
+    pub fn create(x: u8, y: u8) -> SubRegInstr {
         SubRegInstr::new(instr_builder::arg_x_y(0x8005, x, y))
     }
 }
@@ -596,7 +596,7 @@ impl SubNRegInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> SubNRegInstr {
+    pub fn create(x: u8, y: u8) -> SubNRegInstr {
         SubNRegInstr::new(instr_builder::arg_x_y(0x8007, x, y))
     }
 }
@@ -631,7 +631,7 @@ impl ShrRegInstr {
         }
     }
 
-    fn create(x: u8) -> ShrRegInstr {
+    pub fn create(x: u8) -> ShrRegInstr {
         ShrRegInstr::new(instr_builder::arg_x(0x8006, x))
     }
 }
@@ -663,7 +663,7 @@ impl ShlRegInstr {
         }
     }
 
-    fn create(x: u8) -> ShlRegInstr {
+    pub fn create(x: u8) -> ShlRegInstr {
         ShlRegInstr::new(instr_builder::arg_x(0x800E, x))
     }
 }
@@ -695,7 +695,7 @@ impl LoadIInstr {
         }
     }
 
-    fn create(target: u16) -> LoadIInstr {
+    pub fn create(target: u16) -> LoadIInstr {
         LoadIInstr::new(instr_builder::arg_nnn(0xA000, target))
     }
 }
@@ -727,7 +727,7 @@ impl AddByteInstr {
         }
     }
 
-    fn create(x: u8, kk: u8) -> AddByteInstr {
+    pub fn create(x: u8, kk: u8) -> AddByteInstr {
         AddByteInstr::new(instr_builder::arg_x_kk(0x7000, x, kk))
     }
 }
@@ -757,7 +757,7 @@ impl AddIVInstr {
         }
     }
 
-    fn create(x: u8) -> AddIVInstr {
+    pub fn create(x: u8) -> AddIVInstr {
         AddIVInstr::new(instr_builder::arg_x(0xF01E, x))
     }
 }
@@ -787,7 +787,7 @@ impl SetDelayTimerInstr {
         }
     }
 
-    fn create(x: u8) -> SetDelayTimerInstr {
+    pub fn create(x: u8) -> SetDelayTimerInstr {
         SetDelayTimerInstr::new(instr_builder::arg_x(0xF015, x))
     }
 }
@@ -817,7 +817,7 @@ impl GetDelayTimerInstr {
         }
     }
 
-    fn create(x: u8) -> GetDelayTimerInstr {
+    pub fn create(x: u8) -> GetDelayTimerInstr {
         GetDelayTimerInstr::new(instr_builder::arg_x(0xF007, x))
     }
 }
@@ -851,7 +851,7 @@ impl DrawSpriteInstr {
         }
     }
 
-    fn create(x: u8, y: u8, n: u8) -> DrawSpriteInstr {
+    pub fn create(x: u8, y: u8, n: u8) -> DrawSpriteInstr {
         DrawSpriteInstr::new(instr_builder::arg_x_y_n(0xD000, x, y, n))
     }
 }
@@ -903,7 +903,7 @@ impl SkipKeyIfPressedInstr {
         }
     }
 
-    fn create(x: u8) -> SkipKeyIfPressedInstr {
+    pub fn create(x: u8) -> SkipKeyIfPressedInstr {
         SkipKeyIfPressedInstr::new(instr_builder::arg_x(0xE09E, x))
     }
 }
@@ -935,7 +935,7 @@ impl SkipKeyIfNotPressedInstr {
         }
     }
 
-    fn create(x: u8) -> SkipKeyIfNotPressedInstr {
+    pub fn create(x: u8) -> SkipKeyIfNotPressedInstr {
         SkipKeyIfNotPressedInstr::new(instr_builder::arg_x(0xE0A1, x))
     }
 }
@@ -967,7 +967,7 @@ impl ReadRegsFromMemInstr {
         }
     }
 
-    fn create(x: u8) -> ReadRegsFromMemInstr {
+    pub fn create(x: u8) -> ReadRegsFromMemInstr {
         ReadRegsFromMemInstr::new(instr_builder::arg_x(0xF065, x))
     }
 }
@@ -1000,7 +1000,7 @@ impl WriteRegsToMemInstr {
         }
     }
 
-    fn create(x: u8) -> WriteRegsToMemInstr {
+    pub fn create(x: u8) -> WriteRegsToMemInstr {
         WriteRegsToMemInstr::new(instr_builder::arg_x(0xF055, x))
     }
 }
@@ -1033,7 +1033,7 @@ impl SetSoundTimerInstr {
         }
     }
 
-    fn create(x: u8) -> SetSoundTimerInstr {
+    pub fn create(x: u8) -> SetSoundTimerInstr {
         SetSoundTimerInstr::new(instr_builder::arg_x(0xF018, x))
     }
 }
@@ -1065,7 +1065,7 @@ impl RandomInstr {
         }
     }
 
-    fn create(x: u8, kk: u8) -> RandomInstr {
+    pub fn create(x: u8, kk: u8) -> RandomInstr {
         RandomInstr::new(instr_builder::arg_x_kk(0xC000, x, kk))
     }
 }
@@ -1098,7 +1098,7 @@ impl SkipIfRegsEqualInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> SkipIfRegsEqualInstr {
+    pub fn create(x: u8, y: u8) -> SkipIfRegsEqualInstr {
         SkipIfRegsEqualInstr::new(instr_builder::arg_x_y(0x5000, x, y))
     }
 }
@@ -1132,7 +1132,7 @@ impl SkipIfRegsNotEqualInstr {
         }
     }
 
-    fn create(x: u8, y: u8) -> SkipIfRegsNotEqualInstr {
+    pub fn create(x: u8, y: u8) -> SkipIfRegsNotEqualInstr {
         SkipIfRegsNotEqualInstr::new(instr_builder::arg_x_y(0x9000, x, y))
     }
 }
@@ -1164,7 +1164,7 @@ impl JumpPlusVZeroInstr {
         }
     }
 
-    fn create(target: u16) -> JumpPlusVZeroInstr {
+    pub fn create(target: u16) -> JumpPlusVZeroInstr {
         JumpPlusVZeroInstr::new(instr_builder::arg_nnn(0xB000, target))
     }
 }
@@ -1194,7 +1194,7 @@ impl GetDigitAddrInstr {
         }
     }
 
-    fn create(x: u8) -> GetDigitAddrInstr {
+    pub fn create(x: u8) -> GetDigitAddrInstr {
         GetDigitAddrInstr::new(instr_builder::arg_x(0xF029, x))
     }
 }
@@ -1225,7 +1225,7 @@ impl StoreBCDInstr {
         }
     }
 
-    fn create(x: u8) -> StoreBCDInstr {
+    pub fn create(x: u8) -> StoreBCDInstr {
         StoreBCDInstr::new(instr_builder::arg_x(0xF033, x))
     }
 }
@@ -1268,7 +1268,7 @@ impl WaitForKeyInstr {
         }
     }
 
-    fn create(x: u8) -> WaitForKeyInstr {
+    pub fn create(x: u8) -> WaitForKeyInstr {
         WaitForKeyInstr::new(instr_builder::arg_x(0xF00A, x))
     }
 }
