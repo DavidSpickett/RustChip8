@@ -4,7 +4,7 @@ mod test {
     use std::path::PathBuf;
     use std::collections::HashSet;
     extern crate rand;
-    use system::test::test::rand::Rng;
+    use system::test::test::rand::{Rng, thread_rng};
 
     #[test]
     fn run_bc_test_rom() {
@@ -307,14 +307,6 @@ mod test {
         c8.execute(&ins);
     }
 
-    fn randomise_regs(c8: &mut Chip8System) {
-        let mut rng = rand::thread_rng();
-        for r in c8.v_regs.iter_mut() {
-            *r = rng.gen::<u8>();
-        }
-        c8.i_reg = rng.gen::<u16>();
-    }
-
     #[test]
     fn basic_instr_building() {
         let mut instrs: Vec<Box<Instr>> = vec![
@@ -400,10 +392,18 @@ mod test {
         assert_eq!(expected, c8.screen_to_str());
     }
 
+    fn randomise_regs(c8: &mut Chip8System) {
+        let mut rng = rand::thread_rng();
+        for r in c8.v_regs.iter_mut() {
+            *r = rng.gen::<u8>();
+        }
+        c8.i_reg = rng.gen::<u16>();
+    }
+
     #[test]
     #[ignore]
     fn fuzz_test () {
-        let valid_instrs = all_valid_chip8_instrs();
+        let mut valid_instrs = all_valid_chip8_instrs();
         let dummy: Vec<u8> = vec![];
         let mut c8 = make_system(&dummy);
 
@@ -417,6 +417,7 @@ mod test {
         ];
 
         'running: loop {
+            thread_rng().shuffle(&mut valid_instrs);
             for i in valid_instrs.iter() {
                 if (exceptions.contains(&(*i & 0xF0FF)) ||
                     (*i >> 12) == 0x2) || // CALL
@@ -424,12 +425,15 @@ mod test {
                    {
                        continue;
                    }
-                println!("0x{:04x}", *i);
                 randomise_regs(&mut c8);
                 let decode = c8.get_opcode_obj(*i);
+                print!("0x{:04x}", *i);
                 match decode {
                     Err(msg)  => panic!(msg),
-                    Ok(instr) => c8.execute(&instr),
+                    Ok(instr) => {
+                        println!(" -- {}", instr.repr());
+                        c8.execute(&instr);
+                    },
                 }
             }
         }
