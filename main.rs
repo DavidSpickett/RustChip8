@@ -1,160 +1,29 @@
-extern crate sdl2;
-
-use sdl2::pixels::Color;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::keyboard::Scancode;
-//use std::time::Duration;
-use sdl2::rect::Rect;
-
 mod system;
+mod sdl;
 use system::make_system;
 use system::read_rom;
-
-#[allow(dead_code)]
-fn screen_to_pixels(screen: [bool; 64*32]) -> Vec<Vec<u8>> {
-    let mut ret: Vec<Vec<u8>> = vec![];
-    let mut row: Vec<u8> = vec![];
-    for (idx, pixel) in screen.iter().enumerate() {
-        if (idx != 0) && ((idx % 64) == 0) {
-            ret.push(row.clone());
-            row.clear();
-        }
-        if *pixel {
-            row.push(255);
-        } else {
-            row.push(0);
-        }
-    }
-    ret
-}
-
-#[allow(dead_code)]
-fn apply_blur(pixels: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
-    let strength = 20; // Amount of blur
-    let mut new_pixels = pixels.clone();
-    for (y, row) in pixels.iter().enumerate() {
-        for (x, v) in row.iter().enumerate() {
-            // Each lit pixel will bleed some light to the surrounding pixels
-            if *v == 255 {
-                // Apply bleed to surrounding pixels
-                let co_ords: Vec<(usize, usize)> = vec![
-                    (y.saturating_sub(1), x),
-                    (y+1,                 x),
-                    (y,                   x.saturating_sub(1)),
-                    (y,                   x+1),
-                    (y.saturating_sub(1), x.saturating_sub(1)),
-                    (y.saturating_sub(1), x+1),
-                    (y+1,                 x.saturating_sub(1)),
-                    (y+1,                 x+1),
-                ];
-
-                for (y, x) in co_ords {
-                    if (x < pixels[0].len()) &&
-                       (y < pixels.len()) {
-                        new_pixels[y][x] = new_pixels[y][x].saturating_add(strength);
-                    }
-                }
-            }
-        }
-    }
-    new_pixels
-}
-
-#[allow(dead_code)]
-fn scale_pixels(pixels: Vec<Vec<u8>>, scaling_factor: i32) -> Vec<Vec<u8>> {
-    let mut new_pixels: Vec<Vec<u8>> = vec![];
-    for row in pixels.iter() {
-        let mut new_row: Vec<u8> = vec![];
-        for pixel in row.iter() {
-            for _ in 0..scaling_factor {
-                new_row.push(*pixel);
-            }
-        }
-        for _ in 0..scaling_factor {
-            new_pixels.push(new_row.clone());
-        }
-    }
-    new_pixels
-}
+use sdl::{sdl_init, process_events, draw_screen, read_keys, wait_on_key};
 
 pub fn main() {
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
     let pixel_size: i32 = 10;
-
-    let window = video_subsystem.window("RChip8",
-                                        64*(pixel_size as u32),
-                                        32*(pixel_size as u32))
-        .position_centered()
-        .opengl()
-        .build()
-        .unwrap();
-
-    let mut canvas = window.into_canvas().build().unwrap();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    let (mut canvas, mut event_pump) = sdl_init(pixel_size);
 
     let rom_name = String::from("roms/INVADERS");
     let mut c8 = make_system(&read_rom(&rom_name));
 
     'running: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                    break 'running
-                },
-                Event::KeyDown { keycode: Some(Keycode::Tab), ..} => {
-                    c8.screen_to_file();
-                },
-                _ => {}
-            }
+        if process_events(&mut event_pump) {
+            break 'running
         }
-        //TODO: frame limit? Some kind of 'virtual clock speed'?
-        //::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-
-        //Note that these are in the chip8's order, not the PC's keyboard layout
-        let chip8_keys = [
-           Scancode::X,    Scancode::Num1, Scancode::Num2, Scancode::Num3,
-           Scancode::Q,    Scancode::W,    Scancode::E,    Scancode::A,
-           Scancode::S,    Scancode::D,    Scancode::Z,    Scancode::C,
-           Scancode::Num4, Scancode::R,    Scancode::F,    Scancode::V,
-        ];
  
         let instr = c8.fetch_and_decode();
         let flags = instr.get_flags();
         match flags {
-            system::InstrFlags::Keys => {
-                let mut chip8_keystate: [bool; 16] = [false; 16];
-                let key_state = event_pump.keyboard_state();
-
-                for (scancode, chip8key) in chip8_keys.iter().zip(chip8_keystate.iter_mut()) {
-                    *chip8key = key_state.is_scancode_pressed(*scancode);
-                }
-
-                c8.update_keys(chip8_keystate);
-            }
+            system::InstrFlags::Keys => c8.update_keys(read_keys(&mut event_pump)),
             system::InstrFlags::WaitKey => {
-                'polling : loop {
-                    {
-                        let key_state = event_pump.keyboard_state();
-                        for (idx, scancode) in chip8_keys.iter().enumerate() {
-                            if key_state.is_scancode_pressed(*scancode) {
-                                c8.pressed_key = idx;
-                                break 'polling
-                            }
-                        }
-                    } // To force event_pump ref to be dropped here
-                   
-                    // Need this here so application still responds while waiting
-                    // TODO: de-dupe
-                    for event in event_pump.poll_iter() {
-                        match event {
-                            Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), ..} => {
-                                break 'running
-                            }
-                            _ => {},
-                        };
-                    }
+                c8.pressed_key = wait_on_key(&mut event_pump);
+                if c8.pressed_key == 16 {
+                    break 'running
                 }
             }
             _ => {},
@@ -163,42 +32,7 @@ pub fn main() {
         c8.execute(&instr);
 
         match flags {
-            system::InstrFlags::Screen => {
-                /*
-                // Slow path with blur effect
-                let pixels = scale_pixels(apply_blur(screen_to_pixels(c8.screen)), pixel_size);
-                
-                for (y, row) in pixels.iter().enumerate() {
-                    for (x, pixel) in row.iter().enumerate() {
-                        canvas.set_draw_color(Color::RGB(0, *pixel, 0));
-                        //Since set_pixel doesn't appear to be avaiable
-                        if let Err(why) = canvas.fill_rect(
-                            Rect::new(x as i32, y as i32, 1, 1)) {
-                            panic!("Couldn't draw!: {}", why);
-                        }
-                    }
-                }
-                */
-
-                canvas.set_draw_color(Color::RGB(0, 0, 0));
-                canvas.clear();
-
-                canvas.set_draw_color(Color::RGB(0, 255, 0));
-                for (idx, pixel) in c8.screen.iter().enumerate() {
-                    if *pixel {
-                        let x = ((idx as i32) % 64) * pixel_size;
-                        let y = ((idx as i32) / 64) * pixel_size;
-
-                        if let Err(why) = canvas.fill_rect(
-                            Rect::new(x, y, pixel_size as u32,
-                            pixel_size as u32)) {
-                            panic!("couldn't draw to screen!: {}", why);
-                        }
-                    }
-                }
-
-                canvas.present();
-            }
+            system::InstrFlags::Screen => draw_screen(pixel_size, &mut canvas, &c8.screen),
             _ => {},
         }
     }
