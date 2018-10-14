@@ -245,6 +245,7 @@ mod test {
     }
 
     fn setup_invalid_key_test() -> Chip8System {
+        //SKP V0; SKNP V0
         let rom: Vec<u8> = vec![0xE0, 0x9E, 0xE0, 0xA1];
         make_system(&rom)
     }
