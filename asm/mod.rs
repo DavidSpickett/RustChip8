@@ -57,6 +57,8 @@ pub fn parse_asm(lines: &[String]) -> Vec<Box<Instr>> {
             panic!("Unrecognised mnemonic {}", mnemonic);
         }
 
+        check_num_args(mnemonic, args.len());
+
         match mnemonic {
             // No arguments
             "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
@@ -73,22 +75,45 @@ pub fn parse_asm(lines: &[String]) -> Vec<Box<Instr>> {
             // Two arguments
             "OR"    => instrs.push(Box::new(OrRegInstr::create(
                         parse_vx(&args[0]).unwrap(),
-                        parse_vx(&args[1]).unwrap())),
+                        parse_vx(&args[1]).unwrap()))),
             "XOR"    => instrs.push(Box::new(XORRegInstr::create(
                         parse_vx(&args[0]).unwrap(),
-                        parse_vx(&args[1]).unwrap())),
+                        parse_vx(&args[1]).unwrap()))),
             "AND"    => instrs.push(Box::new(AndRegInstr::create(
                         parse_vx(&args[0]).unwrap(),
-                        parse_vx(&args[1]).unwrap())),
+                        parse_vx(&args[1]).unwrap()))),
             "SUB"    => instrs.push(Box::new(SubRegInstr::create(
                         parse_vx(&args[0]).unwrap(),
-                        parse_vx(&args[1]).unwrap())),
+                        parse_vx(&args[1]).unwrap()))),
             "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(
                         parse_vx(&args[0]).unwrap(),
-                        parse_vx(&args[1]).unwrap())),
-            "RND"    => instr.push(Box::new(RandomInstr::create(
+                        parse_vx(&args[1]).unwrap()))),
+            "RND"    => instrs.push(Box::new(RandomInstr::create(
                         parse_vx(&args[0]).unwrap(),
-                        parse_byte(&args[1]).unwrap()),
+                        parse_xx(&args[1]).unwrap()))),
+
+            "SE"     => {
+                let vx = parse_vx(&args[0]).unwrap();
+                // Byte or register versions
+                if let Ok(a) = parse_vx(&args[1]) {
+                    instrs.push(Box::new(SkipIfRegsEqualInstr::create(vx, a)))
+                } else if let Ok(a) = parse_xx(&args[1]) {
+                    instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
+                } else {
+                    panic!("Invalid argument 2 for SE instruction");
+                }
+            },
+            "SNE"   => {
+                let vx = parse_vx(&args[0]).unwrap();
+                // Byte or register versions
+                if let Ok(a) = parse_vx(&args[1]) {
+                    instrs.push(Box::new(SkipIfRegsNotEqualInstr::create(vx, a)))
+                } else if let Ok(a) = parse_xx(&args[1]) {
+                    instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
+                } else {
+                    panic!("Invalid argument 2 for SNE instruction");
+                }
+            } 
 
             // Only draw has 3
             "DRW"   => instrs.push(Box::new(DrawSpriteInstr::create(

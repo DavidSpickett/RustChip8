@@ -19,23 +19,27 @@ mod test {
     #[test]
     fn basic_assembly_test() {
         let expected = [
-            "SYS 0x123".to_string(),
-            "CLS".to_string(),
-            "RET".to_string(),
-            "JP 0x123".to_string(),
-            "CALL 0x123".to_string(),
-            "SHR V0".to_string(),
-            "SHL V0".to_string(),
-            "SKP V0".to_string(),
-            "SKNP V0".to_string(),
-            "DRW V0, V1, 12".to_string(),
-            "AND V0, V1".to_string(),
-            "XOR V0, V1".to_string(),
-            "OR V0, V1".to_string(),
-            "SUB V0, V1".to_string(),
-            "SUBN V0, V1".to_string(),
-            "RND V0, 0x12".to_string(),
-        ];
+            "SYS 0x123",
+            "CLS",
+            "RET",
+            "JP 0x123",
+            "CALL 0x123",
+            "SHR V0",
+            "SHL V0",
+            "SKP V0",
+            "SKNP V0",
+            "DRW V0, V1, 12",
+            "AND V0, V1",
+            "XOR V0, V1",
+            "OR V0, V1",
+            "SUB V0, V1",
+            "SUBN V0, V1",
+            "RND V0, 0x12",
+            "SE V0, 0x12",
+            "SE V0, V1",
+            "SNE V0, 0x12",
+            "SNE V0, V1",
+        ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
         let got = parse_asm(&expected);
         for (e, g) in expected.iter().zip(got.iter()) {
             assert_eq!(*e, g.repr());

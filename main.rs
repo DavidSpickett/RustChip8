@@ -1,4 +1,5 @@
 mod system;
+mod asm;
 mod sdl;
 use system::{make_system, read_rom};
 use sdl::{sdl_init, process_events, draw_screen, read_keys, wait_on_key};
