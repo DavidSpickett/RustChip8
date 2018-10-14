@@ -1,11 +1,15 @@
 mod system;
 mod sdl;
+mod asm;
 use system::{make_system, read_rom};
 use sdl::{sdl_init, process_events, draw_screen, read_keys, wait_on_key};
 use std::{env, process};
 use std::path::Path;
+use asm::parse_asm;
 
 pub fn main() {
+    parse_asm(&["LD V0, V3".to_string()]);
+
     let help = "\
             ./rchip8 <rom path> <scaling factor>\n\
             \n\

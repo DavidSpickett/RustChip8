@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Read;
 
 mod test;
+pub mod instr;
 
 pub fn read_rom(filename: &str) -> Vec<u8> {
     let mut file = match File::open(filename) {
@@ -294,5 +295,3 @@ impl Chip8System {
         instr.exec(self);
     }
 }
-
-mod instr;
