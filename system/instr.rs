@@ -66,9 +66,18 @@ fn op_to_vy(opcode: u16) -> u8 {
 }
 
 pub trait Instr {
-    fn repr(&self) -> String;
+    fn repr(&self) -> String {
+        let mut ret = format!("{}", self.get_mnemonic());
+        let args = self.get_formatted_args();
+        if !args.is_empty() {
+            ret += &format!(" {}", args);
+        }
+        ret
+    }
+
     fn exec(&self, c8: &mut Chip8System);
-    //fn construct() -> instr; //because writing an assembler is too hard
+    fn get_mnemonic(&self) -> &String;
+    fn get_formatted_args(&self) -> String;
     fn get_opcode(&self) -> u16;
     fn get_flags(&self) -> InstrFlags;
 }
@@ -76,13 +85,15 @@ pub trait Instr {
 struct InstrCore {
     opcode: u16,
     flags: InstrFlags,
+    mnemonic: String,
 }
 
 impl InstrCore {
-    fn new(opc: u16, flags: InstrFlags) -> InstrCore {
+    fn new(opcode: u16, flags: InstrFlags, mnemonic: &str) -> InstrCore {
         InstrCore {
-            opcode: opc,
+            opcode,
             flags,
+            mnemonic : mnemonic.to_string(),
         }
     }
 }
@@ -91,6 +102,7 @@ macro_rules! impl_instr {
     () => (
         fn get_opcode(&self) -> u16 { self.core.opcode }
         fn get_flags(&self) -> InstrFlags { self.core.flags}
+        fn get_mnemonic(&self) -> &String { &self.core.mnemonic }
     )
 }
 
@@ -104,7 +116,7 @@ pub struct UndefInstr {
 impl UndefInstr {
     pub fn new(opc: u16, msg: String) -> UndefInstr {
         UndefInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "UNDEF"),
             message: msg,
         }
     }
@@ -114,7 +126,7 @@ impl UndefInstr {
 impl Instr for UndefInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
+    fn get_formatted_args(&self) -> String {
         self.message.to_string()
     }
 
@@ -129,7 +141,7 @@ pub struct SysInstr {
 impl SysInstr {
     pub fn new(opc: u16) -> SysInstr {
         SysInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SYS"),
             target: op_to_nnn(opc),
         }
     }
@@ -142,8 +154,8 @@ impl SysInstr {
 impl Instr for SysInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SYS 0x{:03x}", self.target)
+    fn get_formatted_args(&self) -> String {
+        format!("0x{:03x}", self.target)
     }
 
     fn exec(&self, _c8: &mut Chip8System) {}
@@ -157,7 +169,7 @@ pub struct CallInstr {
 impl CallInstr {
     pub fn new(opc: u16) -> CallInstr {
         CallInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "CALL"),
             target: op_to_nnn(opc),
         }
     }
@@ -170,8 +182,8 @@ impl CallInstr {
 impl Instr for CallInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("CALL 0x{:03x}", self.target)
+    fn get_formatted_args(&self) -> String {
+        format!("0x{:03x}", self.target)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -192,7 +204,7 @@ pub struct JumpInstr {
 impl JumpInstr {
     pub fn new(opc: u16) -> JumpInstr {
         JumpInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "JP"),
             target: op_to_nnn(opc),
         }
     }
@@ -205,8 +217,8 @@ impl JumpInstr {
 impl Instr for JumpInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("JP 0x{:03x}", self.target)
+    fn get_formatted_args(&self) -> String {
+        format!("0x{:03x}", self.target)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -221,7 +233,7 @@ pub struct RetInstr {
 impl RetInstr {
     pub fn new(opc: u16) -> RetInstr {
         RetInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "RET"),
         }
     }
 
@@ -233,8 +245,8 @@ impl RetInstr {
 impl Instr for RetInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        "RET".to_string()
+    fn get_formatted_args(&self) -> String {
+        "".to_string()
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -254,7 +266,7 @@ pub struct SkipEqualInstr {
 impl SkipEqualInstr {
     pub fn new(opc: u16) -> SkipEqualInstr {
         SkipEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SE"),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
@@ -268,8 +280,8 @@ impl SkipEqualInstr {
 impl Instr for SkipEqualInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SE V{}, 0x{:02x}", self.vx, self.kk)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -288,7 +300,7 @@ pub struct SkipNotEqualInstr {
 impl SkipNotEqualInstr {
     pub fn new(opc: u16) -> SkipNotEqualInstr {
         SkipNotEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SNE"),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
@@ -302,8 +314,8 @@ impl SkipNotEqualInstr {
 impl Instr for SkipNotEqualInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SNE V{}, 0x{:02x}", self.vx, self.kk)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -322,7 +334,7 @@ pub struct LoadByteInstr {
 impl LoadByteInstr {
     pub fn new(opc: u16) -> LoadByteInstr {
         LoadByteInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
@@ -336,8 +348,8 @@ impl LoadByteInstr {
 impl Instr for LoadByteInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD V{}, 0x{:02x}", self.vx, self.kk)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -352,7 +364,7 @@ pub struct ClearDisplayInstr {
 impl ClearDisplayInstr {
     pub fn new(opc: u16) -> ClearDisplayInstr {
         ClearDisplayInstr {
-            core: InstrCore::new(opc, InstrFlags::Screen),
+            core: InstrCore::new(opc, InstrFlags::Screen, "CLS"),
         }
     }
 
@@ -364,8 +376,8 @@ impl ClearDisplayInstr {
 impl Instr for ClearDisplayInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        String::from("CLS")
+    fn get_formatted_args(&self) -> String {
+        String::from("")
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -384,7 +396,7 @@ pub struct MovRegInstr {
 impl MovRegInstr {
     pub fn new(opc: u16) -> MovRegInstr {
         MovRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -398,8 +410,8 @@ impl MovRegInstr {
 impl Instr for MovRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -416,7 +428,7 @@ pub struct OrRegInstr {
 impl OrRegInstr {
     pub fn new(opc: u16) -> OrRegInstr {
         OrRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "OR"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -431,8 +443,8 @@ impl OrRegInstr {
 impl Instr for OrRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("OR V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -449,7 +461,7 @@ pub struct AndRegInstr {
 impl AndRegInstr {
     pub fn new(opc: u16) -> AndRegInstr {
         AndRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "AND"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -463,8 +475,8 @@ impl AndRegInstr {
 impl Instr for AndRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("AND V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -481,7 +493,7 @@ pub struct XORRegInstr {
 impl XORRegInstr {
     pub fn new(opc: u16) -> XORRegInstr {
         XORRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "XOR"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -495,8 +507,8 @@ impl XORRegInstr {
 impl Instr for XORRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("XOR V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -513,7 +525,7 @@ pub struct AddRegInstr {
 impl AddRegInstr {
     pub fn new(opc: u16) -> AddRegInstr {
         AddRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "ADD"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -527,8 +539,8 @@ impl AddRegInstr {
 impl Instr for AddRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("ADD V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -554,7 +566,7 @@ pub struct SubRegInstr {
 impl SubRegInstr {
     pub fn new(opc: u16) -> SubRegInstr {
         SubRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SUB"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -568,8 +580,8 @@ impl SubRegInstr {
 impl Instr for SubRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SUB V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -590,7 +602,7 @@ pub struct SubNRegInstr {
 impl SubNRegInstr {
     pub fn new(opc: u16) -> SubNRegInstr {
         SubNRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SUBN"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -604,8 +616,8 @@ impl SubNRegInstr {
 impl Instr for SubNRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SUBN V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -626,7 +638,7 @@ pub struct ShrRegInstr {
 impl ShrRegInstr {
     pub fn new(opc: u16) -> ShrRegInstr {
         ShrRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SHR"),
             vx: op_to_vx(opc),
         }
     }
@@ -639,8 +651,8 @@ impl ShrRegInstr {
 impl Instr for ShrRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SHR V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -658,7 +670,7 @@ pub struct ShlRegInstr {
 impl ShlRegInstr {
     pub fn new(opc: u16) -> ShlRegInstr {
         ShlRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SHL"),
             vx: op_to_vx(opc),
         }
     }
@@ -671,8 +683,8 @@ impl ShlRegInstr {
 impl Instr for ShlRegInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SHL V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -690,7 +702,7 @@ pub struct LoadIInstr {
 impl LoadIInstr {
     pub fn new(opc: u16) -> LoadIInstr {
         LoadIInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             nnn: op_to_nnn(opc),
         }
     }
@@ -703,8 +715,8 @@ impl LoadIInstr {
 impl Instr for LoadIInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD I, 0x{:03x}", self.nnn)
+    fn get_formatted_args(&self) -> String {
+        format!("I, 0x{:03x}", self.nnn)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -721,7 +733,7 @@ pub struct AddByteInstr {
 impl AddByteInstr {
     pub fn new(opc: u16) -> AddByteInstr {
         AddByteInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "ADD"),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
@@ -735,8 +747,8 @@ impl AddByteInstr {
 impl Instr for AddByteInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("ADD V{}, 0x{:02x}", self.vx, self.kk)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -752,7 +764,7 @@ pub struct AddIVInstr {
 impl AddIVInstr {
     pub fn new(opc: u16) -> AddIVInstr {
         AddIVInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "ADD"),
             vx: op_to_vx(opc),
         }
     }
@@ -765,8 +777,8 @@ impl AddIVInstr {
 impl Instr for AddIVInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("ADD I, V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("I, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -782,7 +794,7 @@ pub struct SetDelayTimerInstr {
 impl SetDelayTimerInstr {
     pub fn new(opc: u16) -> SetDelayTimerInstr {
         SetDelayTimerInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -795,8 +807,8 @@ impl SetDelayTimerInstr {
 impl Instr for SetDelayTimerInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD DT, V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("DT, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -812,7 +824,7 @@ pub struct GetDelayTimerInstr {
 impl GetDelayTimerInstr {
     pub fn new(opc: u16) -> GetDelayTimerInstr {
         GetDelayTimerInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -825,8 +837,8 @@ impl GetDelayTimerInstr {
 impl Instr for GetDelayTimerInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD V{}, DT", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, DT", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -844,7 +856,7 @@ pub struct DrawSpriteInstr {
 impl DrawSpriteInstr {
     pub fn new(opc: u16) -> DrawSpriteInstr {
         DrawSpriteInstr {
-            core: InstrCore::new(opc, InstrFlags::Screen),
+            core: InstrCore::new(opc, InstrFlags::Screen, "DRW"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
             n: (opc & 0xF) as u8,
@@ -859,8 +871,8 @@ impl DrawSpriteInstr {
 impl Instr for DrawSpriteInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("DRW V{}, V{}, {}", self.vx, self.vy, self.n)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}, {}", self.vx, self.vy, self.n)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -898,7 +910,7 @@ pub struct SkipKeyIfPressedInstr {
 impl SkipKeyIfPressedInstr {
     pub fn new(opc: u16) -> SkipKeyIfPressedInstr {
         SkipKeyIfPressedInstr {
-            core: InstrCore::new(opc, InstrFlags::Keys),
+            core: InstrCore::new(opc, InstrFlags::Keys, "SKP"),
             vx: op_to_vx(opc),
         }
     }
@@ -911,8 +923,8 @@ impl SkipKeyIfPressedInstr {
 impl Instr for SkipKeyIfPressedInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SKP V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -930,7 +942,7 @@ pub struct SkipKeyIfNotPressedInstr {
 impl SkipKeyIfNotPressedInstr {
     pub fn new(opc: u16) -> SkipKeyIfNotPressedInstr {
         SkipKeyIfNotPressedInstr {
-            core: InstrCore::new(opc, InstrFlags::Keys),
+            core: InstrCore::new(opc, InstrFlags::Keys, "SKNP"),
             vx: op_to_vx(opc),
         }
     }
@@ -943,8 +955,8 @@ impl SkipKeyIfNotPressedInstr {
 impl Instr for SkipKeyIfNotPressedInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SKNP V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -962,7 +974,7 @@ pub struct ReadRegsFromMemInstr {
 impl ReadRegsFromMemInstr {
     pub fn new(opc: u16) -> ReadRegsFromMemInstr {
         ReadRegsFromMemInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -975,8 +987,8 @@ impl ReadRegsFromMemInstr {
 impl Instr for ReadRegsFromMemInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD V{}, [I]", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, [I]", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -995,7 +1007,7 @@ pub struct WriteRegsToMemInstr {
 impl WriteRegsToMemInstr {
     pub fn new(opc: u16) -> WriteRegsToMemInstr {
         WriteRegsToMemInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -1008,8 +1020,8 @@ impl WriteRegsToMemInstr {
 impl Instr for WriteRegsToMemInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD [I], V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("[I], V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1028,7 +1040,7 @@ pub struct SetSoundTimerInstr {
 impl SetSoundTimerInstr {
     pub fn new(opc: u16) -> SetSoundTimerInstr {
         SetSoundTimerInstr {
-            core: InstrCore::new(opc, InstrFlags::Sound),
+            core: InstrCore::new(opc, InstrFlags::Sound, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -1041,8 +1053,8 @@ impl SetSoundTimerInstr {
 impl Instr for SetSoundTimerInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD ST, V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("ST, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1059,7 +1071,7 @@ pub struct RandomInstr {
 impl RandomInstr {
     pub fn new(opc: u16) -> RandomInstr {
         RandomInstr {
-            core: InstrCore::new(opc, InstrFlags::Sound),
+            core: InstrCore::new(opc, InstrFlags::Sound, "RND"),
             vx: op_to_vx(opc),
             kk: op_to_kk(opc),
         }
@@ -1073,8 +1085,8 @@ impl RandomInstr {
 impl Instr for RandomInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("RND V{}, 0x{:02x}", self.vx, self.kk)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, 0x{:02x}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1092,7 +1104,7 @@ pub struct SkipIfRegsEqualInstr {
 impl SkipIfRegsEqualInstr {
     pub fn new(opc: u16) -> SkipIfRegsEqualInstr {
         SkipIfRegsEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SE"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -1106,8 +1118,8 @@ impl SkipIfRegsEqualInstr {
 impl Instr for SkipIfRegsEqualInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SE V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1126,7 +1138,7 @@ pub struct SkipIfRegsNotEqualInstr {
 impl SkipIfRegsNotEqualInstr {
     pub fn new(opc: u16) -> SkipIfRegsNotEqualInstr {
         SkipIfRegsNotEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "SNE"),
             vx: op_to_vx(opc),
             vy: op_to_vy(opc),
         }
@@ -1140,8 +1152,8 @@ impl SkipIfRegsNotEqualInstr {
 impl Instr for SkipIfRegsNotEqualInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("SNE V{}, V{}", self.vx, self.vy)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}", self.vx, self.vy)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1159,7 +1171,7 @@ pub struct JumpPlusVZeroInstr {
 impl JumpPlusVZeroInstr {
     pub fn new(opc: u16) -> JumpPlusVZeroInstr {
         JumpPlusVZeroInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "JP"),
             target: op_to_nnn(opc),
         }
     }
@@ -1172,8 +1184,8 @@ impl JumpPlusVZeroInstr {
 impl Instr for JumpPlusVZeroInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("JP V0, 0x{:03x}", self.target)
+    fn get_formatted_args(&self) -> String {
+        format!("V0, 0x{:03x}", self.target)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1189,7 +1201,7 @@ pub struct GetDigitAddrInstr {
 impl GetDigitAddrInstr {
     pub fn new(opc: u16) -> GetDigitAddrInstr {
         GetDigitAddrInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -1202,8 +1214,8 @@ impl GetDigitAddrInstr {
 impl Instr for GetDigitAddrInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD F, V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("F, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1220,7 +1232,7 @@ pub struct StoreBCDInstr {
 impl StoreBCDInstr {
     pub fn new(opc: u16) -> StoreBCDInstr {
         StoreBCDInstr {
-            core: InstrCore::new(opc, InstrFlags::_None),
+            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -1233,8 +1245,8 @@ impl StoreBCDInstr {
 impl Instr for StoreBCDInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD B, V{}", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("B, V{}", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1263,7 +1275,7 @@ pub struct WaitForKeyInstr {
 impl WaitForKeyInstr {
     pub fn new(opc: u16) -> WaitForKeyInstr {
         WaitForKeyInstr {
-            core: InstrCore::new(opc, InstrFlags::WaitKey),
+            core: InstrCore::new(opc, InstrFlags::WaitKey, "LD"),
             vx: op_to_vx(opc),
         }
     }
@@ -1276,8 +1288,8 @@ impl WaitForKeyInstr {
 impl Instr for WaitForKeyInstr {
     impl_instr!();
 
-    fn repr(&self) -> String {
-        format!("LD V{}, K", self.vx)
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, K", self.vx)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
