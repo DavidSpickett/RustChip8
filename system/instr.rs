@@ -114,6 +114,14 @@ macro_rules! format_x_y_args {
     )
 }
 
+macro_rules! format_nnn {
+    () => (
+        fn get_formatted_args(&self) -> String {
+            format!("0x{:03x}", self.nnn)
+        }
+    )
+}
+
 #[allow(dead_code)]
 pub struct UndefInstr {
     core: InstrCore,
@@ -143,14 +151,14 @@ impl Instr for UndefInstr {
 
 pub struct SysInstr {
     core: InstrCore,
-    target: u16,
+    nnn: u16,
 }
 
 impl SysInstr {
     pub fn new(opc: u16) -> SysInstr {
         SysInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "SYS"),
-            target: op_to_nnn(opc),
+            nnn: op_to_nnn(opc),
         }
     }
 
@@ -161,24 +169,21 @@ impl SysInstr {
 
 impl Instr for SysInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("0x{:03x}", self.target)
-    }
+    format_nnn!();
 
     fn exec(&self, _c8: &mut Chip8System) {}
 }
 
 pub struct CallInstr {
     core: InstrCore,
-    target: u16,
+    nnn: u16,
 }
 
 impl CallInstr {
     pub fn new(opc: u16) -> CallInstr {
         CallInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "CALL"),
-            target: op_to_nnn(opc),
+            nnn: op_to_nnn(opc),
         }
     }
 
@@ -189,10 +194,7 @@ impl CallInstr {
 
 impl Instr for CallInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("0x{:03x}", self.target)
-    }
+    format_nnn!();
 
     fn exec(&self, c8: &mut Chip8System) {
         if c8.stack.len() == 16 {
@@ -200,20 +202,20 @@ impl Instr for CallInstr {
         }
 
         c8.stack.push(c8.pc);
-        c8.pc = self.target;
+        c8.pc = self.nnn;
     }
 }
 
 pub struct JumpInstr {
     core: InstrCore,
-    target: u16,
+    nnn: u16,
 }
 
 impl JumpInstr {
     pub fn new(opc: u16) -> JumpInstr {
         JumpInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "JP"),
-            target: op_to_nnn(opc),
+            nnn: op_to_nnn(opc),
         }
     }
 
@@ -224,13 +226,10 @@ impl JumpInstr {
 
 impl Instr for JumpInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("0x{:03x}", self.target)
-    }
+    format_nnn!();
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.target;
+        c8.pc = self.nnn;
     }
 }
 
@@ -1146,14 +1145,14 @@ impl Instr for SkipIfRegsNotEqualInstr {
 
 pub struct JumpPlusVZeroInstr {
     core: InstrCore,
-    target: u16,
+    nnn: u16,
 }
 
 impl JumpPlusVZeroInstr {
     pub fn new(opc: u16) -> JumpPlusVZeroInstr {
         JumpPlusVZeroInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "JP"),
-            target: op_to_nnn(opc),
+            nnn: op_to_nnn(opc),
         }
     }
 
@@ -1166,11 +1165,11 @@ impl Instr for JumpPlusVZeroInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V0, 0x{:03x}", self.target)
+        format!("V0, 0x{:03x}", self.nnn)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.target + u16::from(c8.v_regs[0]);
+        c8.pc = self.nnn + u16::from(c8.v_regs[0]);
     }
 }
 
