@@ -35,7 +35,7 @@ static CHIP8_KEYS : [Scancode; 16] = [
 ];
 
 pub fn wait_on_key(event_pump: &mut EventPump) -> usize {
-    'polling : loop {
+    loop {
         {
             let key_state = event_pump.keyboard_state();
             for (idx, scancode) in CHIP8_KEYS.iter().enumerate() {
@@ -133,9 +133,9 @@ fn screen_to_pixels(screen: [bool; 64*32]) -> Vec<Vec<u8>> {
 }
 
 #[allow(dead_code)]
-fn apply_blur(pixels: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+fn apply_blur(pixels: &[Vec<u8>]) -> Vec<Vec<u8>> {
     let strength = 20; // Amount of blur
-    let mut new_pixels = pixels.clone();
+    let mut new_pixels = pixels.to_owned();
     for (y, row) in pixels.iter().enumerate() {
         for (x, v) in row.iter().enumerate() {
             // Each lit pixel will bleed some light to the surrounding pixels
@@ -165,7 +165,7 @@ fn apply_blur(pixels: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
 }
 
 #[allow(dead_code)]
-fn scale_pixels(pixels: Vec<Vec<u8>>, scaling_factor: i32) -> Vec<Vec<u8>> {
+fn scale_pixels(pixels: &[Vec<u8>], scaling_factor: i32) -> Vec<Vec<u8>> {
     let mut new_pixels: Vec<Vec<u8>> = vec![];
     for row in pixels.iter() {
         let mut new_row: Vec<u8> = vec![];

@@ -64,7 +64,7 @@ pub fn main() {
         let instr = c8.fetch_and_decode();
         let flags = instr.get_flags();
         match flags {
-            system::InstrFlags::Keys => c8.update_keys(read_keys(&mut event_pump)),
+            system::InstrFlags::Keys => c8.update_keys(read_keys(&event_pump)),
             system::InstrFlags::WaitKey => {
                 c8.pressed_key = wait_on_key(&mut event_pump);
                 if c8.pressed_key == 16 {
@@ -76,9 +76,8 @@ pub fn main() {
 
         c8.execute(&instr);
 
-        match flags {
-            system::InstrFlags::Screen => draw_screen(scaling_factor, &mut canvas, &c8.screen),
-            _ => {},
+        if flags == system::InstrFlags::Screen {
+            draw_screen(scaling_factor, &mut canvas, &c8.screen);
         }
     }
 }
