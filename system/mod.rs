@@ -99,7 +99,8 @@ impl Chip8System {
         }
         ret
     }
-
+    
+    #[allow(dead_code)]
     pub fn screen_to_file(&self) {
         let mut file = OpenOptions::new()
                         .write(true)
