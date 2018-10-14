@@ -106,6 +106,14 @@ macro_rules! impl_instr {
     )
 }
 
+macro_rules! format_x_y_args {
+    () => (
+        fn get_formatted_args(&self) -> String {
+            format!("V{}, V{}", self.vx, self.vy)
+        }
+    )
+}
+
 #[allow(dead_code)]
 pub struct UndefInstr {
     core: InstrCore,
@@ -409,10 +417,7 @@ impl MovRegInstr {
 
 impl Instr for MovRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = c8.v_regs[self.vy as usize];
@@ -442,10 +447,7 @@ impl OrRegInstr {
 
 impl Instr for OrRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] |= c8.v_regs[self.vy as usize];
@@ -474,10 +476,7 @@ impl AndRegInstr {
 
 impl Instr for AndRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] &= c8.v_regs[self.vy as usize];
@@ -506,10 +505,7 @@ impl XORRegInstr {
 
 impl Instr for XORRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] ^= c8.v_regs[self.vy as usize];
@@ -538,10 +534,7 @@ impl AddRegInstr {
 
 impl Instr for AddRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         let x = c8.v_regs[self.vx as usize];
@@ -579,10 +572,7 @@ impl SubRegInstr {
 
 impl Instr for SubRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         let x = c8.v_regs[self.vx as usize];
@@ -615,10 +605,7 @@ impl SubNRegInstr {
 
 impl Instr for SubNRegInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         let x = c8.v_regs[self.vx as usize];
@@ -1117,10 +1104,7 @@ impl SkipIfRegsEqualInstr {
 
 impl Instr for SkipIfRegsEqualInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         if c8.v_regs[self.vx as usize] == c8.v_regs[self.vy as usize] {
@@ -1151,10 +1135,7 @@ impl SkipIfRegsNotEqualInstr {
 
 impl Instr for SkipIfRegsNotEqualInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}", self.vx, self.vy)
-    }
+    format_x_y_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         if c8.v_regs[self.vx as usize] != c8.v_regs[self.vy as usize] {
