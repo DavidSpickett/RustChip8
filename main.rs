@@ -1,15 +1,60 @@
 mod system;
 mod sdl;
-use system::make_system;
-use system::read_rom;
+use system::{make_system, read_rom};
 use sdl::{sdl_init, process_events, draw_screen, read_keys, wait_on_key};
+use std::{env, process};
+use std::path::Path;
 
 pub fn main() {
-    let pixel_size: i32 = 10;
-    let (mut canvas, mut event_pump) = sdl_init(pixel_size);
+    let help = "\
+            ./rchip8 <rom path> <scaling factor>\n\
+            \n\
+            ROM path is relative to the exe. (required)\n\
+            Scaling factor multiplies the size of each Chip8 pixel. (default 1)\n\
+            e.g. 2 means each block is 2x2 pixels in the final output.";
 
-    let rom_name = String::from("roms/INVADERS");
-    let mut c8 = make_system(&read_rom(&rom_name));
+    let mut rom_path: Option<String> = None;
+    let mut scaling_factor = 1;
+
+    let args = env::args();
+    if args.len() < 2 {
+        println!("ROM file path is required.");
+        process::exit(1);
+    }
+    for (pos, argument) in args.enumerate() {
+        if argument == "-h" {
+            println!("{}", help);
+            process::exit(0);
+        }
+
+        match pos {
+            0 => {},
+            1 => {
+                if Path::new(&argument).exists() {
+                    rom_path = Some(argument);
+                } else {
+                    println!("ROM file \"{}\" not found.", argument);
+                    process::exit(1);
+                }
+            },
+            2 => {
+                scaling_factor = match argument.parse::<i32>() {
+                    Err(msg) => {
+                        println!("Invalid scaling factor \"{}\": {}", argument, msg);
+                        process::exit(1);
+                    }
+                    Ok(v) => v,
+                }
+            }
+            _ => panic!("Unexpected argument \"{}\" in position {}", argument, pos),
+        }
+    }
+
+    let (mut canvas, mut event_pump) = sdl_init(scaling_factor);
+    let mut c8 = match rom_path {
+        Some(p) => make_system(&read_rom(&p)),
+        None    => panic!("No ROM path set!"),
+    };
 
     'running: loop {
         if process_events(&mut event_pump) {
@@ -32,7 +77,7 @@ pub fn main() {
         c8.execute(&instr);
 
         match flags {
-            system::InstrFlags::Screen => draw_screen(pixel_size, &mut canvas, &c8.screen),
+            system::InstrFlags::Screen => draw_screen(scaling_factor, &mut canvas, &c8.screen),
             _ => {},
         }
     }
