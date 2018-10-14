@@ -103,6 +103,7 @@ pub fn parse_asm(lines: &[String]) -> Vec<Box<Instr>> {
                     panic!("Invalid argument 2 for SE instruction");
                 }
             },
+
             "SNE"   => {
                 let vx = parse_vx(&args[0]).unwrap();
                 // Byte or register versions
@@ -113,7 +114,26 @@ pub fn parse_asm(lines: &[String]) -> Vec<Box<Instr>> {
                 } else {
                     panic!("Invalid argument 2 for SNE instruction");
                 }
-            } 
+            }
+
+            "ADD"   => {
+                if let Ok(a) = parse_vx(&args[0]) {
+                    // Vx, byte
+                    if let Ok(b) = parse_vx(&args[1]) {
+                        instrs.push(Box::new(AddRegInstr::create(a, b)));
+                    // Vx, Vy
+                    } else if let Ok(b) = parse_xx(&args[1]) {
+                        instrs.push(Box::new(AddByteInstr::create(a, b)));
+                    } else {
+                        panic!("Invalid arguments for ADD instruction");
+                    }
+                // I, Vx
+                } else if args[0] == "I" {
+                    instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
+                } else {
+                    panic!("Invalid args to ADD instruction");
+                }
+            }
 
             // Only draw has 3
             "DRW"   => instrs.push(Box::new(DrawSpriteInstr::create(

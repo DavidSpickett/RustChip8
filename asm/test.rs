@@ -39,6 +39,9 @@ mod test {
             "SE V0, V1",
             "SNE V0, 0x12",
             "SNE V0, V1",
+            "ADD I, V0",
+            "ADD V0, V1",
+            "ADD V0, 0x12",
         ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
         let got = parse_asm(&expected);
         for (e, g) in expected.iter().zip(got.iter()) {
