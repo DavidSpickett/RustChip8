@@ -47,20 +47,55 @@ pub fn parse_asm(lines: &[String]) -> Vec<Box<Instr>> {
         // Split line into menemonic <space> arg, arg, arg, etc
         let mut parts = line.split_whitespace();
         let mnemonic = parts.next().unwrap();
-        let args = parts.collect::<Vec<&str>>();
+        let args = parts.map(|x| x.replace(",", "")).collect::<Vec<String>>();
+
         // Get potential instruction objects by menmonic
         let potential_instrs = chip8_instrs.iter().filter(
             |i| i.get_mnemonic() == mnemonic ).collect::<Vec<&Box<Instr>>>();
 
-        if potential_instrs.len() != 0 {
-            check_num_args(mnemonic, args.len());
+        if potential_instrs.len() == 0 {
+            panic!("Unrecognised mnemonic {}", mnemonic);
+        }
 
-            // Now parse the arguments to check type
-            // TODO: standard checkers for the differnt argument pairs e.g. VX, VY etc.
-            // like we did for the create() methods
-            match mnemonic {
-                _ => panic!("Unrecognised mnemonic: {}", mnemonic),
-            }
+        match mnemonic {
+            // No arguments
+            "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
+            "RET"   => instrs.push(Box::new(RetInstr::create())),
+            // Single argument
+            "SYS"   => instrs.push(Box::new(SysInstr::create(parse_nnn(&args[0]).unwrap()))),
+            "JP"    => instrs.push(Box::new(JumpInstr::create(parse_nnn(&args[0]).unwrap()))),
+            "CALL"  => instrs.push(Box::new(CallInstr::create(parse_nnn(&args[0]).unwrap()))),
+            "SHR"   => instrs.push(Box::new(ShrRegInstr::create(parse_vx(&args[0]).unwrap()))),
+            "SHL"   => instrs.push(Box::new(ShlRegInstr::create(parse_vx(&args[0]).unwrap()))),
+            "SKP"   => instrs.push(Box::new(SkipKeyIfPressedInstr::create(parse_vx(&args[0]).unwrap()))),
+            "SKNP"  => instrs.push(Box::new(SkipKeyIfNotPressedInstr::create(parse_vx(&args[0]).unwrap()))),
+
+            // Two arguments
+            "OR"    => instrs.push(Box::new(OrRegInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_vx(&args[1]).unwrap())),
+            "XOR"    => instrs.push(Box::new(XORRegInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_vx(&args[1]).unwrap())),
+            "AND"    => instrs.push(Box::new(AndRegInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_vx(&args[1]).unwrap())),
+            "SUB"    => instrs.push(Box::new(SubRegInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_vx(&args[1]).unwrap())),
+            "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_vx(&args[1]).unwrap())),
+            "RND"    => instr.push(Box::new(RandomInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_byte(&args[1]).unwrap()),
+
+            // Only draw has 3
+            "DRW"   => instrs.push(Box::new(DrawSpriteInstr::create(
+                        parse_vx(&args[0]).unwrap(),
+                        parse_vx(&args[1]).unwrap(),
+                        parse_n(&args[2]).unwrap()))),
+            _ => panic!("Unrecognised mnemonic: {}", mnemonic),
         }
     }
     
@@ -90,6 +125,52 @@ fn parse_vx(arg: &String) -> Result<u8, String> {
     let num = &arg[1..];
     match num.parse::<u8>() {
         Err(msg) => Err(format!("Invalid index {}: {}", num, msg)),
+        Ok(v) => {
+            if v > 15 {
+                return Err("V register number must be < 16".to_string());
+            } else
+            {
+                return Ok(v);
+            }
+        }
+    }
+}
+
+fn parse_xx(arg: &String) -> Result<u8, String> {
+    if &arg[..2] != "0x" {
+        return Err("Byte must start with \"0x\"".to_string());
+    }
+    if arg.len() != 4 {
+        return Err("Byte must be 2 hex chars".to_string());
+    }
+    match u8::from_str_radix(&arg[2..], 16) {
+        Err(_) => Err("Invalid hex number".to_string()),
         Ok(v) => Ok(v),
+    }
+}
+
+fn parse_nnn(arg: &String) -> Result<u16, String> {
+    if &arg[..2] != "0x" {
+        return Err("Address must start with \"0x\"".to_string());
+    }
+    if arg.len() != 5 {
+        return Err("Address must be 3 hex chars".to_string());
+    }
+    match u16::from_str_radix(&arg[2..], 16) {
+        Err(_) => Err("Invalid hex number".to_string()),
+        Ok(v) => Ok(v),
+    }
+}
+
+fn parse_n(arg: &String) -> Result<u8, String> {
+    match arg.parse::<u8>() {
+        Err(msg) => Err(msg.to_string()),
+        Ok(v) => {
+            if v > 15 {
+                return Err("Nibble must be < 16".to_string());
+            } else {
+                return Ok(v);
+            }
+        }
     }
 }
