@@ -88,6 +88,49 @@ pub fn parse_asm(lines: &[String]) -> Vec<Box<Instr>> {
                 }
             }
 
+            "LD"    => {
+                if let Ok(a) = parse_vx(&args[0]) {
+                    if let Ok(b) = parse_xx(&args[1]) {
+                        // LD V, byte
+                        instrs.push(Box::new(LoadByteInstr::create(a, b)));
+                    } else if let Ok(b) = parse_vx(&args[1]) {
+                        // LD V, V
+                        instrs.push(Box::new(MovRegInstr::create(a, b)));
+                    } else if args[1] == "DT" {
+                        // LD V, DT
+                        instrs.push(Box::new(GetDelayTimerInstr::create(a)));
+                    } else if args[1] == "K" {
+                        // LD V, K
+                        instrs.push(Box::new(WaitForKeyInstr::create(a)));
+                    } else if args[1] == "[I]" {
+                        // LD V, [I]
+                        instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
+                    } else {
+                        panic!("Invalid args to LD instruction");
+                    }
+                } else if args[0] == "I" {
+                    // LD I, nnn
+                    instrs.push(Box::new(LoadIInstr::create(parse_nnn(&args[1]).unwrap())));
+                } else if args[0] == "DT" {
+                    // LD DT, V
+                    instrs.push(Box::new(SetDelayTimerInstr::create(parse_vx(&args[1]).unwrap())));
+                } else if args[0] == "ST" {
+                    // LD ST, V
+                    instrs.push(Box::new(SetSoundTimerInstr::create(parse_vx(&args[1]).unwrap())));
+                } else if args[0] == "F" {
+                    // LD F, V
+                    instrs.push(Box::new(GetDigitAddrInstr::create(parse_vx(&args[1]).unwrap())));
+                } else if args[0] == "B" {
+                    // LD B, V
+                    instrs.push(Box::new(StoreBCDInstr::create(parse_vx(&args[1]).unwrap())));
+                } else if args[0] == "[I]" {
+                    // LD [I], V
+                    instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
+                } else {
+                    panic!("Invalid args to LD instruction");
+                }
+            }
+
             // Only draw has 3
             "DRW"   => instrs.push(Box::new(DrawSpriteInstr::create(
                         parse_vx(&args[0]).unwrap(),
@@ -135,6 +178,9 @@ fn parse_vx(arg: &String) -> Result<u8, String> {
 }
 
 fn parse_xx(arg: &String) -> Result<u8, String> {
+    if arg.len() < 2 {
+        return Err("Arg too short to be a byte".to_string());
+    }
     if &arg[..2] != "0x" {
         return Err("Byte must start with \"0x\"".to_string());
     }
@@ -148,6 +194,9 @@ fn parse_xx(arg: &String) -> Result<u8, String> {
 }
 
 fn parse_nnn(arg: &String) -> Result<u16, String> {
+    if arg.len() < 5 {
+        return Err("Arg is too short to be an address.".to_string());
+    }
     if &arg[..2] != "0x" {
         return Err("Address must start with \"0x\"".to_string());
     }

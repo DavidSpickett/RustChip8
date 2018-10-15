@@ -42,6 +42,17 @@ mod test {
             "ADD I, V0",
             "ADD V0, V1",
             "ADD V0, 0x12",
+            "LD V0, 0x12",
+            "LD V0, V1",
+            "LD I, 0x123",
+            "LD V0, DT",
+            "LD V0, K",
+            "LD V0, [I]",
+            "LD DT, V0",
+            "LD ST, V0",
+            "LD F, V0",
+            "LD B, V0",
+            "LD [I], V0",
         ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
         let got = parse_asm(&expected);
         for (e, g) in expected.iter().zip(got.iter()) {
