@@ -412,10 +412,7 @@ mod test {
         JP 0x204\n\
         JP 0x214";
 
-        let mut lines: Vec<String> = vec![];
-        for l in asm.lines() {
-            lines.push(l.to_string());
-        }
+        let lines = asm.lines().map(|x| x.to_string()).collect::<Vec<String>>();
         let instrs = parse_asm(&lines);
         let rom = instr_to_data(&instrs);
 
