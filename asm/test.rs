@@ -54,9 +54,28 @@ mod test {
             "LD B, V0",
             "LD [I], V0",
         ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
-        let got = parse_asm(&expected);
+        let asm_str = expected.iter().fold(String::from(""), |acc, n| acc + "\n" + n);
+        let got = parse_asm(&asm_str);
         for (e, g) in expected.iter().zip(got.iter()) {
             assert_eq!(*e, g.repr());
         }
+    }
+
+    fn assert_asm_bitpatterns(asm: &String, expected: &[u16]) {
+        for (instr, exp) in parse_asm(&asm).iter().zip(expected.iter()) {
+            assert_eq!(*exp, instr.get_opcode());
+        }
+    }
+
+    #[test]
+    fn test_blank_lines_ignored() {
+        let asm = "\
+        \t\n\
+        DRW V0, V1, 6
+             \n\
+        ADD V0, 0x34".to_string();
+        let expected: [u16; 2] = [0xD016, 0x7034];
+
+        assert_asm_bitpatterns(&asm, &expected);
     }
 }

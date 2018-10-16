@@ -410,10 +410,9 @@ mod test {
         ADD V0, 0x01\n\
         SE V0, 0x10\n\
         JP 0x204\n\
-        JP 0x214";
+        JP 0x214".to_string();
 
-        let lines = asm.lines().map(|x| x.to_string()).collect::<Vec<String>>();
-        let instrs = parse_asm(&lines);
+        let instrs = parse_asm(&asm);
         let rom = instr_to_data(&instrs);
 
         let target: u16 = 0x214;
