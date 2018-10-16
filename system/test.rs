@@ -400,16 +400,24 @@ mod test {
     #[test]
     fn assembling_example_program() {
         let asm = "\
+        // Setup X and Y
         ADD V1, 0x02\n\
         ADD V2, 0x07\n\
+        // Load addr of digit
         LD F, V0\n\
+        // Draw it
         DRW V1, V2, 5\n\
+        // Increment X
         ADD V1, 0x08\n\
+        // If we're about to draw char 8, move down a row
         SNE V0, 0x07\n\
         ADD V2, 0x0d\n\
+        // Use next sprite
         ADD V0, 0x01\n\
+        // If we just drew 'F' end the program
         SE V0, 0x10\n\
         JP 0x204\n\
+        //Jump top self
         JP 0x214".to_string();
 
         let instrs = parse_asm(&asm);

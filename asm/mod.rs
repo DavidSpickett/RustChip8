@@ -16,7 +16,14 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
 
 pub fn parse_line(line: &str) -> Option<Box<Instr>> {
     let mut instr: Option<Box<Instr>> = None;
-    let parts = line.split_whitespace();
+
+    let comment_chars = "//";
+    let mut no_comments_line = line;
+    if let Some(idx) = no_comments_line.find(comment_chars) {
+        no_comments_line = no_comments_line.split_at(idx).0;
+    }
+
+    let parts = no_comments_line.split_whitespace();
     let mut args = parts.map(|x| x.replace(",", "")).collect::<Vec<String>>();
 
     // Lines consisting of only whitespace
@@ -24,7 +31,8 @@ pub fn parse_line(line: &str) -> Option<Box<Instr>> {
         return instr;
     }
 
-    let mnemonic = args.remove(0); 
+    let mnemonic = args.remove(0);
+
     check_num_args(&mnemonic, args.len());
 
     match mnemonic.as_str() {

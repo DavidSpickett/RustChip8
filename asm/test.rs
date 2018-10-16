@@ -78,4 +78,17 @@ mod test {
 
         assert_asm_bitpatterns(&asm, &expected);
     }
+
+    #[test]
+    fn test_single_line_comments_ignored() {
+        let asm = "\
+        // This is a single line comment\n\
+        DRW V5, V2, 7\n\
+        LD F, V9 // This is one the end of a line\n\
+        LD ST, V2// This one has no space after the arg\n\
+        CLS//This one LD ST, V7 includes an instr".to_string();
+        let expected: Vec<u16> = vec![0xD527, 0xF929, 0xF218, 0x00E0];
+
+        assert_asm_bitpatterns(&asm, &expected);
+    }
 }
