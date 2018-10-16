@@ -1,20 +1,26 @@
 use system::instr::*;
+use std::collections::HashMap;
 mod test;
 
 pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
     let mut instrs: Vec<Box<Instr>> = vec![];
+    let mut symbols: HashMap<String, u16> = HashMap::new();
+    let mut addr: u16 = 0x0200;
 
     for line in asm.lines() {
-        match parse_line(&line) {
-            Some(i) => instrs.push(i),
-            None => {} // Blank lines
+        match parse_line(&line, &mut symbols, addr) {
+            Some(i) => {
+                instrs.push(i);
+                addr += 2;
+            }
+            None => {} // Blank lines, comments, symbols etc.
         }
     }
 
     instrs
 }
 
-pub fn parse_line(line: &str) -> Option<Box<Instr>> {
+pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: u16) -> Option<Box<Instr>> {
     let mut instr: Option<Box<Instr>> = None;
 
     let comment_chars = "//";
@@ -33,6 +39,15 @@ pub fn parse_line(line: &str) -> Option<Box<Instr>> {
 
     let mnemonic = args.remove(0);
 
+    // Check for labels
+    if args.is_empty() {
+        if mnemonic.ends_with(":") {
+            // Add a symbol for this address
+            symbols.insert(mnemonic[..mnemonic.len()-1].to_string(), current_addr);
+            return instr;
+        }
+    }
+
     check_num_args(&mnemonic, args.len());
 
     match mnemonic.as_str() {
@@ -40,9 +55,15 @@ pub fn parse_line(line: &str) -> Option<Box<Instr>> {
         "CLS"   => instr = Some(Box::new(ClearDisplayInstr::create())),
         "RET"   => instr = Some(Box::new(RetInstr::create())),
         // Single argument
-        "SYS"   => instr = Some(Box::new(SysInstr::create(parse_nnn(&args[0]).unwrap()))),
-        "JP"    => instr = Some(Box::new(JumpInstr::create(parse_nnn(&args[0]).unwrap()))),
-        "CALL"  => instr = Some(Box::new(CallInstr::create(parse_nnn(&args[0]).unwrap()))),
+        "SYS"   => instr = Some(Box::new(SysInstr::create(
+                    parse_nnn_or_symbol(&args[0], &symbols)
+                    .unwrap()))),
+        "JP"    => instr = Some(Box::new(JumpInstr::create(
+                    parse_nnn_or_symbol(&args[0], &symbols)
+                    .unwrap()))),
+        "CALL"  => instr = Some(Box::new(CallInstr::create(
+                    parse_nnn_or_symbol(&args[0], &symbols)
+                    .unwrap()))),
         "SHR"   => instr = Some(Box::new(ShrRegInstr::create(parse_vx(&args[0]).unwrap()))),
         "SHL"   => instr = Some(Box::new(ShlRegInstr::create(parse_vx(&args[0]).unwrap()))),
         "SKP"   => instr = Some(Box::new(SkipKeyIfPressedInstr::create(parse_vx(&args[0]).unwrap()))),
@@ -133,7 +154,9 @@ pub fn parse_line(line: &str) -> Option<Box<Instr>> {
                 }
             } else if args[0] == "I" {
                 // LD I, nnn
-                instr = Some(Box::new(LoadIInstr::create(parse_nnn(&args[1]).unwrap())));
+                instr = Some(Box::new(LoadIInstr::create(
+                            parse_nnn_or_symbol(&args[1], &symbols)
+                            .unwrap())));
             } else if args[0] == "DT" {
                 // LD DT, V
                 instr = Some(Box::new(SetDelayTimerInstr::create(parse_vx(&args[1]).unwrap())));
@@ -231,6 +254,18 @@ fn parse_nnn(arg: &String) -> Result<u16, String> {
     match u16::from_str_radix(&arg[2..], 16) {
         Err(_) => Err("Invalid hex number".to_string()),
         Ok(v) => Ok(v),
+    }
+}
+
+fn parse_nnn_or_symbol(arg: &String, symbols: &HashMap<String, u16>) -> Result<u16, String> {
+    match parse_nnn(arg) {
+        Ok(v) => Ok(v),
+        Err(_) => {
+            match symbols.get(arg) {
+                Some(addr) => Ok(*addr),
+                None => Err(format!("Invalid address or symbol name \"{}\"", arg)),
+            }
+        }
     }
 }
 

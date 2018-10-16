@@ -91,4 +91,34 @@ mod test {
 
         assert_asm_bitpatterns(&asm, &expected);
     }
+
+    #[test]
+    fn branch_back_to_label() {
+        let asm = "\
+        SYS 0x000\n\
+        // Comment lines don't increment address\n\
+        foo:\n\
+        SYS 0x111\n\
+        bar:: // Should be refered to as 'bar:' just fine
+        JP foo\n\
+        JP bar:".to_string();
+        let expected: Vec<u16> = vec![0x0000, 0x0111, 0x1202, 0x1204];
+
+        assert_asm_bitpatterns(&asm, &expected);
+    }
+
+    #[test]
+    fn test_symbol_capable_instructions() {
+        let asm ="\
+        SYS 0x000\n\
+        SYS 0x000\n\
+        target:\n\
+        SYS target\n\
+        JP target\n\
+        CALL target\n\
+        LD I, target".to_string();
+        let expected: Vec<u16> = vec![0x0000, 0x0000, 0x0204, 0x1204, 0x2204, 0xA204];
+
+        assert_asm_bitpatterns(&asm, &expected);
+    }
 }
