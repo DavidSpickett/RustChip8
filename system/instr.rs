@@ -98,11 +98,27 @@ impl InstrCore {
     }
 }
 
-macro_rules! impl_instr {
+macro_rules! impl_instr_base {
     () => (
-        fn get_opcode(&self) -> u16 { self.core.opcode }
         fn get_flags(&self) -> InstrFlags { self.core.flags}
         fn get_mnemonic(&self) -> &String { &self.core.mnemonic }
+    )
+}
+
+macro_rules! impl_instr {
+    () => (
+        impl_instr_base!();
+        fn get_opcode(&self) -> u16 { self.core.opcode }
+    )
+}
+
+macro_rules! impl_instr_with_symbol {
+    () => (
+        impl_instr_base!();
+        fn get_opcode(&self) -> u16 {
+            let _ = self.get_addr();
+            self.core.opcode
+        }
     )
 }
 
@@ -195,7 +211,7 @@ impl SysInstr {
 }
 
 impl Instr for SysInstr {
-    impl_instr!();
+    impl_instr_with_symbol!();
     format_nnn!();
 
     fn exec(&self, _c8: &mut Chip8System) {
@@ -231,7 +247,7 @@ impl CallInstr {
 }
 
 impl Instr for CallInstr {
-    impl_instr!();
+    impl_instr_with_symbol!();
     format_nnn!();
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -271,7 +287,7 @@ impl JumpInstr {
 }
 
 impl Instr for JumpInstr {
-    impl_instr!();
+    impl_instr_with_symbol!();
     format_nnn!();
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -753,7 +769,7 @@ impl LoadIInstr {
 }
 
 impl Instr for LoadIInstr {
-    impl_instr!();
+    impl_instr_with_symbol!();
 
     fn get_formatted_args(&self) -> String {
         match self.nnn {
@@ -1227,7 +1243,7 @@ impl JumpPlusVZeroInstr {
 }
 
 impl Instr for JumpPlusVZeroInstr {
-    impl_instr!();
+    impl_instr_with_symbol!();
 
     fn get_formatted_args(&self) -> String {
         match self.nnn {

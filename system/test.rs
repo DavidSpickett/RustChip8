@@ -479,6 +479,7 @@ mod test {
     }
 
     // TODO: test same thing for all address based instrs
+    // Need to deal with unwind boundaries
     #[test]
     #[should_panic(expected="Cannot get address for unresolved symbol \"xyz\"")]
     fn exec_on_unresolved_symbol_panics() {
@@ -490,16 +491,34 @@ mod test {
     }
 
     #[test]
-    fn instrs_have_create_with_symbol() {
-        let data = [
-            (Box::new(SysInstr::create_with_symbol("foo".to_string())) as Box<Instr>, "SYS foo"),
-            (Box::new(JumpInstr::create_with_symbol("bar".to_string())) as Box<Instr>, "JP bar"),
-            (Box::new(CallInstr::create_with_symbol("abc".to_string())) as Box<Instr>, "CALL abc"),
-            (Box::new(LoadIInstr::create_with_symbol("dog".to_string())) as Box<Instr>, "LD I, dog"),
-            (Box::new(JumpPlusVZeroInstr::create_with_symbol("cat".to_string())) as Box<Instr>, "JP V0, cat"),
+    #[should_panic(expected="Cannot get address for unresolved symbol \"xyz\"")]
+    fn get_opcode_on_unresolved_symbol_panics() {
+        let ins = JumpInstr::create_with_symbol("xyz".to_string());
+        ins.get_opcode();
+    }
+
+
+    #[test]
+    fn handling_symbol_instrs() {
+        // Frsit make sure they all have symbol create
+        let sym = "foo".to_string();
+        let instrs = [
+            Box::new(          SysInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
+            Box::new(         JumpInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
+            Box::new(         CallInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
+            Box::new(        LoadIInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
+            Box::new(JumpPlusVZeroInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
         ];
 
-        for (ins, expected) in data.iter() {
+        // They can all repr with the symbol name
+        let expected_repr = [
+            "SYS foo",
+            "JP foo",
+            "CALL foo",
+            "LD I, foo",
+            "JP V0, foo",
+        ];
+        for (ins, expected) in instrs.iter().zip(expected_repr.iter()) {
             assert_eq!(String::from(*expected), ins.repr());
         }
     }
