@@ -23,6 +23,7 @@ mod test {
             "CLS",
             "RET",
             "JP 0x123",
+            "JP V0, 0x123",
             "CALL 0x123",
             "SHR V0",
             "SHL V0",
@@ -108,7 +109,35 @@ mod test {
     }
 
     #[test]
-    fn test_symbol_capable_instructions() {
+    fn branch_forward_to_label() {
+        let asm = "\
+        JP start
+        CALL start
+        SYS start
+        JP V0, start
+        LD I, start
+        start:
+        self:
+        JP self".to_string();
+        let expected: Vec<u16> = vec![0x120a, 0x220a, 0x020a, 0xB20a, 0xA20a, 0x120a];
+
+        assert_asm_bitpatterns(&asm, &expected);
+    }
+
+    #[test]
+    #[should_panic(expected="Could not resolve symbol \"aardvark\"")]
+    fn unresolved_symbol_panics() {
+        let asm = "\
+        JP next\n\
+        next:\n\
+        CALL next\n\
+        JP aardvark".to_string();
+
+        parse_asm(&asm);
+    }
+
+    #[test]
+    fn symbol_capable_instructions() {
         let asm ="\
         SYS 0x000\n\
         SYS 0x000\n\
@@ -121,4 +150,38 @@ mod test {
 
         assert_asm_bitpatterns(&asm, &expected);
     }
+
+    #[test]
+    fn set_i_extended_address() {
+        // Standard jump with remainder
+        let asm = "LD I, 0x1999".to_string();
+        let expected: Vec<u16> = vec![
+            0xAFFF,
+            0x6EFF,
+            0xFE1E, 0xFE1E, 0xFE1E, 0xFE1E, 0xFE1E, 0xFE1E, 0xFE1E, 0xFE1E, 0xFE1E,
+            0x6Ea3,
+            0xFE1E,
+        ];
+
+        assert_asm_bitpatterns(&asm, &expected);
+
+        // No remainder here
+        let asm2 = "LD I, 0x11FD".to_string();
+        let expected2: Vec<u16> = vec![
+            0xAFFF,
+            0x6EFF,
+            0xFE1E, 0xFE1E,
+        ];
+        assert_asm_bitpatterns(&asm2, &expected2);
+
+        // Only remainder
+        let asm3 = "LD I, 0x100B".to_string();
+        let expected3: Vec<u16> = vec![
+            0xAFFF,
+            0x6E0C,
+            0xFE1E,
+        ];
+        assert_asm_bitpatterns(&asm3, &expected3);
+    }
+
 }

@@ -135,7 +135,11 @@ macro_rules! impl_instr_with_symbol {
 
         fn resolve_symbol(&mut self, addr: u16) {
             match self.nnn {
-                AddressOrSymbol::Symbol(_) => self.nnn = AddressOrSymbol::Address(addr),
+                AddressOrSymbol::Symbol(_) => {
+                    self.nnn = AddressOrSymbol::Address(addr);
+                    // Update stored encoding
+                    self.core.opcode |= 0x0FFF & addr;
+                }
                 AddressOrSymbol::Address(_) => panic!("Symbol already resolved for this instruction!"),
             }
         }
@@ -161,7 +165,7 @@ macro_rules! format_x_y_args {
     )
 }
 
-enum AddressOrSymbol {
+pub enum AddressOrSymbol {
     Address(u16),
     Symbol(String),
 }
