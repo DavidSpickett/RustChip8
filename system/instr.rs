@@ -106,6 +106,17 @@ macro_rules! impl_instr {
     )
 }
 
+macro_rules! impl_addr_or_symbol {
+    () => (
+        fn get_addr(&self) -> u16 {
+            match self.nnn {
+                AddressOrSymbol::Address(a) => a,
+                AddressOrSymbol::Symbol(ref s) => panic!("Cannot get address for unresolved symbol \"{}\"", s),
+            }
+        }
+    )
+}
+
 macro_rules! format_x_y_args {
     () => (
         fn get_formatted_args(&self) -> String {
@@ -114,10 +125,18 @@ macro_rules! format_x_y_args {
     )
 }
 
+enum AddressOrSymbol {
+    Address(u16),
+    Symbol(String),
+}
+
 macro_rules! format_nnn {
     () => (
         fn get_formatted_args(&self) -> String {
-            format!("0x{:03x}", self.nnn)
+            match self.nnn {
+                AddressOrSymbol::Address(a) => format!("0x{:03x}", a),
+                AddressOrSymbol::Symbol(ref s) => format!("{}", s),
+            }
         }
     )
 }
@@ -151,19 +170,27 @@ impl Instr for UndefInstr {
 
 pub struct SysInstr {
     core: InstrCore,
-    nnn: u16,
+    nnn: AddressOrSymbol,
 }
 
 impl SysInstr {
+    impl_addr_or_symbol!();
+
     pub fn new(opc: u16) -> SysInstr {
         SysInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "SYS"),
-            nnn: op_to_nnn(opc),
+            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
         }
     }
 
     pub fn create(target: u16) -> SysInstr {
         SysInstr::new(instr_builder::arg_nnn(0x0000, target))
+    }
+
+    pub fn create_with_symbol(sym: String) -> SysInstr {
+        let mut i = SysInstr::create(0);
+        i.nnn = AddressOrSymbol::Symbol(sym);
+        i
     }
 }
 
@@ -171,24 +198,35 @@ impl Instr for SysInstr {
     impl_instr!();
     format_nnn!();
 
-    fn exec(&self, _c8: &mut Chip8System) {}
+    fn exec(&self, _c8: &mut Chip8System) {
+        // Mostly pointless but just in case we do something with SYS later
+        let _ = self.get_addr();
+    }
 }
 
 pub struct CallInstr {
     core: InstrCore,
-    nnn: u16,
+    nnn: AddressOrSymbol,
 }
 
 impl CallInstr {
+    impl_addr_or_symbol!();
+
     pub fn new(opc: u16) -> CallInstr {
         CallInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "CALL"),
-            nnn: op_to_nnn(opc),
+            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
         }
     }
 
     pub fn create(target: u16) -> CallInstr {
         CallInstr::new(instr_builder::arg_nnn(0x2000, target))
+    }
+
+    pub fn create_with_symbol(sym: String) -> CallInstr {
+        let mut i = CallInstr::create(0);
+        i.nnn = AddressOrSymbol::Symbol(sym);
+        i
     }
 }
 
@@ -202,25 +240,33 @@ impl Instr for CallInstr {
         }
 
         c8.stack.push(c8.pc);
-        c8.pc = self.nnn;
+        c8.pc = self.get_addr();
     }
 }
 
 pub struct JumpInstr {
     core: InstrCore,
-    nnn: u16,
+    nnn: AddressOrSymbol,
 }
 
 impl JumpInstr {
+    impl_addr_or_symbol!();
+
     pub fn new(opc: u16) -> JumpInstr {
         JumpInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "JP"),
-            nnn: op_to_nnn(opc),
+            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
         }
     }
 
     pub fn create(target: u16) -> JumpInstr {
         JumpInstr::new(instr_builder::arg_nnn(0x1000, target))
+    }
+
+    pub fn create_with_symbol(sym: String) -> JumpInstr {
+        let mut i = JumpInstr::create(0);
+        i.nnn = AddressOrSymbol::Symbol(sym);
+        i
     }
 }
 
@@ -229,7 +275,7 @@ impl Instr for JumpInstr {
     format_nnn!();
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.nnn;
+        c8.pc = self.get_addr();
     }
 }
 
@@ -682,19 +728,27 @@ impl Instr for ShlRegInstr {
 
 pub struct LoadIInstr {
     core: InstrCore,
-    nnn: u16,
+    nnn: AddressOrSymbol,
 }
 
 impl LoadIInstr {
+    impl_addr_or_symbol!();
+
     pub fn new(opc: u16) -> LoadIInstr {
         LoadIInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "LD"),
-            nnn: op_to_nnn(opc),
+            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
         }
     }
 
     pub fn create(target: u16) -> LoadIInstr {
         LoadIInstr::new(instr_builder::arg_nnn(0xA000, target))
+    }
+
+    pub fn create_with_symbol(sym: String) -> LoadIInstr {
+        let mut i = LoadIInstr::create(0);
+        i.nnn = AddressOrSymbol::Symbol(sym);
+        i
     }
 }
 
@@ -702,11 +756,14 @@ impl Instr for LoadIInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("I, 0x{:03x}", self.nnn)
+        match self.nnn {
+            AddressOrSymbol::Address(a) => format!("I, 0x{:03x}", a),
+            AddressOrSymbol::Symbol(ref s) => format!("I, {}", s),
+        }
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.i_reg = self.nnn;
+        c8.i_reg = self.get_addr();
     }
 }
 
@@ -1145,19 +1202,27 @@ impl Instr for SkipIfRegsNotEqualInstr {
 
 pub struct JumpPlusVZeroInstr {
     core: InstrCore,
-    nnn: u16,
+    nnn: AddressOrSymbol,
 }
 
 impl JumpPlusVZeroInstr {
+    impl_addr_or_symbol!();
+
     pub fn new(opc: u16) -> JumpPlusVZeroInstr {
         JumpPlusVZeroInstr {
             core: InstrCore::new(opc, InstrFlags::_None, "JP"),
-            nnn: op_to_nnn(opc),
+            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
         }
     }
 
     pub fn create(target: u16) -> JumpPlusVZeroInstr {
         JumpPlusVZeroInstr::new(instr_builder::arg_nnn(0xB000, target))
+    }
+
+    pub fn create_with_symbol(sym: String) -> JumpPlusVZeroInstr {
+        let mut i = JumpPlusVZeroInstr::create(0);
+        i.nnn = AddressOrSymbol::Symbol(sym);
+        i
     }
 }
 
@@ -1165,11 +1230,14 @@ impl Instr for JumpPlusVZeroInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V0, 0x{:03x}", self.nnn)
+        match self.nnn {
+            AddressOrSymbol::Address(a) => format!("V0, 0x{:03x}", a),
+            AddressOrSymbol::Symbol(ref s) => format!("V0, {}", s),
+        }
     }
 
     fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.nnn + u16::from(c8.v_regs[0]);
+        c8.pc = self.get_addr() + u16::from(c8.v_regs[0]);
     }
 }
 

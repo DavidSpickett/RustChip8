@@ -478,6 +478,32 @@ mod test {
         }
     }
 
+    // TODO: test same thing for all address based instrs
+    #[test]
+    #[should_panic(expected="Cannot get address for unresolved symbol \"xyz\"")]
+    fn exec_on_unresolved_symbol_panics() {
+        let dummy: Vec<u8> = vec![];
+        let mut c8 = make_system(&dummy);
+
+        let ins = Box::new(SysInstr::create_with_symbol("xyz".to_string())) as Box<Instr>;
+        c8.execute(&ins);
+    }
+
+    #[test]
+    fn instrs_have_create_with_symbol() {
+        let data = [
+            (Box::new(SysInstr::create_with_symbol("foo".to_string())) as Box<Instr>, "SYS foo"),
+            (Box::new(JumpInstr::create_with_symbol("bar".to_string())) as Box<Instr>, "JP bar"),
+            (Box::new(CallInstr::create_with_symbol("abc".to_string())) as Box<Instr>, "CALL abc"),
+            (Box::new(LoadIInstr::create_with_symbol("dog".to_string())) as Box<Instr>, "LD I, dog"),
+            (Box::new(JumpPlusVZeroInstr::create_with_symbol("cat".to_string())) as Box<Instr>, "JP V0, cat"),
+        ];
+
+        for (ins, expected) in data.iter() {
+            assert_eq!(String::from(*expected), ins.repr());
+        }
+    }
+
     fn randomise_regs(c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();
         for r in c8.v_regs.iter_mut() {
