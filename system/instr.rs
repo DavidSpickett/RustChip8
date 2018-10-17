@@ -80,6 +80,8 @@ pub trait Instr {
     fn get_formatted_args(&self) -> String;
     fn get_opcode(&self) -> u16;
     fn get_flags(&self) -> InstrFlags;
+    fn get_symbol(&self) -> Option<String>;
+    fn resolve_symbol(&mut self, addr: u16);
 }
 
 struct InstrCore {
@@ -109,6 +111,10 @@ macro_rules! impl_instr {
     () => (
         impl_instr_base!();
         fn get_opcode(&self) -> u16 { self.core.opcode }
+        fn get_symbol(&self) -> Option<String> { None }
+        fn resolve_symbol(&mut self, _addr: u16) {
+            panic!("Can't resolve symbol for instruction without an address!");
+        }
     )
 }
 
@@ -118,6 +124,20 @@ macro_rules! impl_instr_with_symbol {
         fn get_opcode(&self) -> u16 {
             let _ = self.get_addr();
             self.core.opcode
+        }
+
+        fn get_symbol(&self) -> Option<String> {
+            match self.nnn {
+                AddressOrSymbol::Symbol(ref s) => Some(s.to_string()),
+                AddressOrSymbol::Address(_) => None,
+            }
+        }
+
+        fn resolve_symbol(&mut self, addr: u16) {
+            match self.nnn {
+                AddressOrSymbol::Symbol(_) => self.nnn = AddressOrSymbol::Address(addr),
+                AddressOrSymbol::Address(_) => panic!("Symbol already resolved for this instruction!"),
+            }
         }
     )
 }
