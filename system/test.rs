@@ -490,39 +490,6 @@ mod test {
         c8.execute(&ins);
     }
 
-    #[test]
-    #[should_panic(expected="Cannot get address for unresolved symbol \"xyz\"")]
-    fn get_opcode_on_unresolved_symbol_panics() {
-        let ins = JumpInstr::create_with_symbol("xyz".to_string());
-        ins.get_opcode();
-    }
-
-
-    #[test]
-    fn handling_symbol_instrs() {
-        // First make sure they all have symbol create
-        let sym = "foo".to_string();
-        let instrs = [
-            Box::new(          SysInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(         JumpInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(         CallInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(        LoadIInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(JumpPlusVZeroInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-        ];
-
-        // They can all repr with the symbol name
-        let expected_repr = [
-            "SYS foo",
-            "JP foo",
-            "CALL foo",
-            "LD I, foo",
-            "JP V0, foo",
-        ];
-        for (ins, expected) in instrs.iter().zip(expected_repr.iter()) {
-            assert_eq!(String::from(*expected), ins.repr());
-        }
-    }
-
     fn randomise_regs(c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();
         for r in c8.v_regs.iter_mut() {
