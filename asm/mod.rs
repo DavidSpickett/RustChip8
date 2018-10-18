@@ -73,6 +73,8 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
         "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
         "RET"   => instrs.push(Box::new(RetInstr::create())),
         // Single argument
+        ".word" => instrs.push(Box::new(WordInstr::create(
+                    parse_extended_addr(&args[0]).unwrap()))),
         "SYS"   => {
             match parse_nnn_or_symbol(&args[0]) {
                 AddressOrSymbol::Symbol(s) => {
@@ -300,7 +302,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
 fn check_num_args(mnemonic: &str, num: usize) {
     let expected = match mnemonic {
         "CLS" | "RET" => 0,
-        "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" => 1,
+        "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".word" => 1,
         // Some variants of LD only have 1 variable arg, but for asm
         // purposes they all have two
         "LD" | "ADD" | "SE" | "SNE" | "OR" | "AND" | "XOR" | "SUB" | "SUBN" | "RND" => 2,

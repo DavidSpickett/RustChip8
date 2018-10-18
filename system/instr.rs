@@ -208,6 +208,34 @@ impl Instr for UndefInstr {
     fn exec(&self, _c8: &mut Chip8System) {}
 }
 
+pub struct WordInstr {
+    core: InstrCore,
+}
+
+impl WordInstr {
+    pub fn new(opc: u16) -> WordInstr {
+        WordInstr {
+            core: InstrCore::new(opc, InstrFlags::_None, ".word"),
+        }
+    }
+
+    pub fn create(word: u16) -> WordInstr {
+        WordInstr::new(word)
+    }
+}
+
+impl Instr for WordInstr {
+    impl_instr!();
+
+    fn get_formatted_args(&self) -> String {
+        format!("0x{:04x}", self.core.opcode)
+    }
+
+    fn exec(&self, _c8: &mut Chip8System) {
+        panic!("Cannot execute a .word pseudo instruction!")
+    }
+}
+
 pub struct SysInstr {
     core: InstrCore,
     nnn: AddressOrSymbol,

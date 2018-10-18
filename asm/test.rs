@@ -54,6 +54,7 @@ mod test {
             "LD F, V0",
             "LD B, V0",
             "LD [I], V0",
+            ".word 0x1234",
         ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
         let asm_str = expected.iter().fold(String::from(""), |acc, n| acc + "\n" + n);
         let got = parse_asm(&asm_str);
@@ -184,4 +185,17 @@ mod test {
         assert_asm_bitpatterns(&asm3, &expected3);
     }
 
+    #[test]
+    fn word_directive() {
+        let asm = "\
+            CALL end // Jump to check that .word does increment the address
+            .word 0x1234\n\
+            ADD V0, V1\n\
+            .word 0x0000\n\
+            .word 0x2111 // Value can overlap real instructions\n\
+        end:\n\
+            ADD V2, V3".to_string();
+        let expected: Vec<u16> = vec![0x220A, 0x1234, 0x8014, 0x0000, 0x2111, 0x8234];
+        assert_asm_bitpatterns(&asm, &expected);
+    }
 }

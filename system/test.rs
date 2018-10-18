@@ -500,7 +500,7 @@ mod test {
 
     #[test]
     fn handling_symbol_instrs() {
-        // Frsit make sure they all have symbol create
+        // First make sure they all have symbol create
         let sym = "foo".to_string();
         let instrs = [
             Box::new(          SysInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
