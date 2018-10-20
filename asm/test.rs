@@ -88,6 +88,9 @@ mod test {
             ("ADD V0, V1", "ADD V0, V1"),
             ("ADD v0, V1", "ADD V0, V1"),
             ("ADD V0, v1", "ADD V0, V1"),
+            //A bit silly but they work so lets check them
+            ("ADD V0000000, v1", "ADD V0, V1"),
+            ("ADD V00F, v1", "ADD V15, V1"),
 
             ("ADD VA, V10", "ADD V10, V10"),
             ("ADD V02, VF", "ADD V2, V15"),
