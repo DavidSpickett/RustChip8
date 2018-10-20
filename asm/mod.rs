@@ -6,11 +6,24 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
     let mut instrs: Vec<Box<Instr>> = vec![];
     let mut symbols: HashMap<String, u16> = HashMap::new();
     let mut addr: u16 = 0x0200;
+    let mut errs: Vec<(usize, String, String)> = vec![];
 
-    for line in asm.lines() {
-        let mut new_instrs = parse_line(&line, &mut symbols, addr);
-        addr += 2*(new_instrs.len() as u16);
-        instrs.append(&mut new_instrs);
+    for (line_no, line) in asm.lines().enumerate() {
+        match parse_line(&line, &mut symbols, addr) {
+            Err(msg) => errs.push((line_no, msg, line.to_string())),
+            Ok(mut i) => {
+                addr += 2*(i.len() as u16);
+                instrs.append(&mut i);
+            },
+        }
+    }
+
+    if !errs.is_empty() {
+        let mut err_msg = format!("Assembly failed with {} errors.\n", errs.len());
+        for (line_no, msg, line) in errs {
+            err_msg += &format!("\n{}: {}\n{}", line_no, line, msg);
+        }
+        panic!(err_msg);
     }
 
     // Patch up symbol addresses
@@ -26,7 +39,10 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
     instrs
 }
 
-pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: u16) -> Vec<Box<Instr>> {
+pub fn parse_line(line: &str,
+                  symbols: &mut HashMap<String, u16>, 
+                  current_addr: u16)
+                    -> Result<Vec<Box<Instr>>, String> {
     // This function will add new symbols to the map and return an
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
@@ -45,7 +61,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
 
     // Lines consisting of only whitespace
     if args.is_empty() {
-        return instrs;
+        return Ok(instrs);
     }
 
     let mut mnemonic = args.remove(0);
@@ -55,7 +71,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
         if mnemonic.ends_with(":") {
             // Add a symbol for this address
             symbols.insert(mnemonic[..mnemonic.len()-1].to_string(), current_addr);
-            return instrs;
+            return Ok(instrs);
         }
     }
 
@@ -65,10 +81,13 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
     if mnemonic == "JP" {
         // JP can have one or two args
         if (args.len() == 0) || (args.len() > 2) {
-            panic!("Expected 1 or 2 args for JP instruction, got {}", args.len());
+            return Err(format!("Expected 1 or 2 args for JP instruction, got {}", args.len()));
         }
     } else {
-        check_num_args(&mnemonic, args.len());
+        match check_num_args(&mnemonic, args.len()) {
+            Ok(_) => {},
+            Err(msg) => return Err(msg),
+        }
     }
 
     match mnemonic.as_str() {
@@ -92,7 +111,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
             if args.len() == 2 {
                 // Use the parser here to allow different formatting
                 if parse_vx(&args[0]).unwrap() != 0 {
-                    panic!("Jump plus instruction can only use V0!");
+                    return Err(format!("Jump plus instruction can only use V0!"));
                 }
 
                 // JP V0, addr so use the 2nd arg
@@ -159,7 +178,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
             } else if let Ok(a) = parse_xx(&args[1]) {
                 instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
             } else {
-                panic!("Invalid argument 2 for SE instruction");
+                return Err(format!("Invalid argument 2 for SE instruction"));
             }
         },
 
@@ -171,7 +190,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
             } else if let Ok(a) = parse_xx(&args[1]) {
                 instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
             } else {
-                panic!("Invalid argument 2 for SNE instruction");
+                return Err(format!("Invalid argument 2 for SNE instruction"));
             }
         }
 
@@ -184,13 +203,13 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
                 } else if let Ok(b) = parse_xx(&args[1]) {
                     instrs.push(Box::new(AddByteInstr::create(a, b)));
                 } else {
-                    panic!("Invalid arguments for ADD instruction");
+                    return Err(format!("Invalid arguments for ADD instruction"));
                 }
             // I, Vx
             } else if args[0] == "I" {
                 instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
-                panic!("Invalid args to ADD instruction");
+                return Err(format!("Invalid args to ADD instruction"));
             }
         }
 
@@ -212,7 +231,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
                     // LD V, [I]
                     instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
                 } else {
-                    panic!("Invalid args to LD instruction");
+                    return Err(format!("Invalid args to LD instruction"));
                 }
             } else if args[0] == "I" {
                 // Special 16 bit address sequence
@@ -288,7 +307,7 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
                 // LD [I], V
                 instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
-                panic!("Invalid args to LD instruction");
+                return Err(format!("Invalid args to LD instruction"));
             }
         }
 
@@ -297,25 +316,26 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
                     parse_vx(&args[0]).unwrap(),
                     parse_vx(&args[1]).unwrap(),
                     parse_n(&args[2]).unwrap()))),
-        _ => panic!("Unrecognised mnemonic: {}", mnemonic),
+        _ => return Err(format!("Unrecognised mnemonic: {}", mnemonic)),
     }
 
-    instrs
+    Ok(instrs)
 }
 
-fn check_num_args(mnemonic: &str, num: usize) {
-    let expected = match mnemonic {
+fn check_num_args(mnemonic: &str, num: usize) -> Result<usize, String> {
+    let expected: usize = match mnemonic {
         "CLS" | "RET" => 0,
         "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".WORD" => 1,
         // Some variants of LD only have 1 variable arg, but for asm
         // purposes they all have two
         "LD" | "ADD" | "SE" | "SNE" | "OR" | "AND" | "XOR" | "SUB" | "SUBN" | "RND" => 2,
         "DRW" => 3,
-        _ => panic!("Can't verify number of args for mnemonic: {}", mnemonic),
+        _ => return Err(format!("Can't verify number of args for mnemonic: {}", mnemonic)),
     };
     if expected != num {
-        panic!("Expected {} args for {}, got {}", expected, mnemonic, num);
+        return Err(format!("Expected {} args for {}, got {}", expected, mnemonic, num));
     }
+    Ok(num)
 }
 
 fn parse_vx(arg: &String) -> Result<u8, String> {
