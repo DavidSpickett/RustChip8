@@ -217,45 +217,45 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
                     // of digits isn't a great way to go
                     if addr <= 0xFFF {
                         instrs.push(Box::new(LoadIInstr::create(addr)));
-                    }
+                    } else {
+                        // We're going to change I anyway so we can trash it
+                        let rest_of_addr = addr - 0xFFF;
+                        instrs.push(Box::new(LoadIInstr::create(0xFFF)));
 
-                    // We're going to change I anyway so we can trash it
-                    let rest_of_addr = addr - 0xFFF;
-                    instrs.push(Box::new(LoadIInstr::create(0xFFF)));
+                        // Number of ADD I, Vx we have to do with 0xFF
+                        // Can't think of another way other than reserving a register here
+                        let regnum: u8 = 14;
+                        let max_regval: u16 = 0xFF;
+                        let num_adds = (rest_of_addr / max_regval) as u8;
+                        // Remainder value for the last ADD
+                        let remainder = (rest_of_addr % max_regval) as u8;
 
-                    // Number of ADD I, Vx we have to do with 0xFF
-                    // Can't think of another way other than reserving a register here
-                    let regnum: u8 = 14;
-                    let max_regval: u16 = 0xFF;
-                    let num_adds = (rest_of_addr / max_regval) as u8;
-                    // Remainder value for the last ADD
-                    let remainder = (rest_of_addr % max_regval) as u8;
+                        if num_adds != 0 {
+                            instrs.push(Box::new(LoadByteInstr::create(regnum, max_regval as u8)));
+                            for _ in 0..num_adds {
+                                instrs.push(Box::new(AddIVInstr::create(regnum)));
+                            }
+                        }
 
-                    if num_adds != 0 {
-                        instrs.push(Box::new(LoadByteInstr::create(regnum, max_regval as u8)));
-                        for _ in 0..num_adds {
+                        if remainder != 0 {
+                            instrs.push(Box::new(LoadByteInstr::create(regnum, remainder)));
                             instrs.push(Box::new(AddIVInstr::create(regnum)));
                         }
+
+                        /* TADA! You just loaded a 16 bit address into I
+                           but gave up a register temporarily to do it.
+
+                           The reason you can't save/restore is as follows:
+                           - Set I to some location (font memory/high addr?)
+                           - Save V0 to memory
+                           - Do stuff with it to get I to the high address
+                           - Then set I back to the saved V0 location
+                           ....
+
+                           Which defeats the point of this whole silly exercise.
+                           Also restoring the memory you save to is tricky.
+                        */
                     }
-
-                    if remainder != 0 {
-                        instrs.push(Box::new(LoadByteInstr::create(regnum, remainder)));
-                        instrs.push(Box::new(AddIVInstr::create(regnum)));
-                    }
-
-                    /* TADA! You just loaded a 16 bit address into I
-                       but gave up a register temporarily to do it.
-
-                       The reason you can't save/restore is as follows:
-                       - Set I to some location (font memory/high addr?)
-                       - Save V0 to memory
-                       - Do stuff with it to get I to the high address
-                       - Then set I back to the saved V0 location
-                       ....
-
-                       Which defeats the point of this whole silly exercise.
-                       Also restoring the memory you save to is tricky.
-                    */
                 } else {
                     // LD I, nnn
                     // Using the *2nd* argument!
@@ -332,52 +332,50 @@ fn parse_vx(arg: &String) -> Result<u8, String> {
     }
 }
 
-fn parse_xx(arg: &String) -> Result<u8, String> {
+fn parse_hex(arg: &String) -> Result<u16, &str> {
     if arg.len() < 2 {
-        return Err("Arg too short to be a byte".to_string());
+        return Err("Arg too short to be a hex number");
     }
     if &arg[..2] != "0x" {
-        return Err("Byte must start with \"0x\"".to_string());
-    }
-    if arg.len() != 4 {
-        return Err("Byte must be 2 hex chars".to_string());
-    }
-    match u8::from_str_radix(&arg[2..], 16) {
-        Err(_) => Err("Invalid hex number".to_string()),
-        Ok(v) => Ok(v),
-    }
-}
-
-fn parse_nnn(arg: &String) -> Result<u16, String> {
-    if arg.len() < 5 {
-        return Err("Arg is too short to be an address.".to_string());
-    }
-    if &arg[..2] != "0x" {
-        return Err("Address must start with \"0x\"".to_string());
-    }
-    if arg.len() != 5 {
-        return Err("Address must be 3 hex chars".to_string());
+        return Err("Hex number must start with \"0x\"");
     }
     match u16::from_str_radix(&arg[2..], 16) {
-        Err(_) => Err("Invalid hex number".to_string()),
-        Ok(v) => Ok(v),
+        //TODO: we're masking range errors here
+        Err(_) => Err("Invalid hex number"),
+        Ok(v) => Ok(v), 
     }
 }
 
-fn parse_extended_addr(arg: &String) -> Result<u16, String> {
-    // Basically a 16 bit hex number
-    if arg.len() != 6 {
-        return Err("Incorrect length for extended address.".to_string());
-    }
-    if &arg[..2] != "0x" {
-        return Err("Extended address must start with \"0x\"".to_string());
-    }
-    match u16::from_str_radix(&arg[2..], 16) {
-        Err(_) => Err("Invalid hex number for extended address.".to_string()),
-        Ok(v) => Ok(v),
+fn parse_xx(arg: &String) -> Result<u8, &str> {
+    match parse_hex(arg) {
+        Err(msg) => Err(msg),
+        Ok(v) => {
+            if v > 0xff {
+                return Err("Byte argument larger than 0xFF");
+            }
+            Ok(v as u8)
+        }
     }
 }
 
+fn parse_nnn(arg: &String) -> Result<u16, &str> {
+    match parse_hex(arg) {
+        Err(msg) => Err(msg),
+        Ok(v) => {
+            if v > 0xfff {
+                return Err("Address argument larger than 0xFFF");
+            }
+            Ok(v)
+        }
+    }
+}
+
+fn parse_extended_addr(arg: &String) -> Result<u16, &str> {
+    match parse_hex(arg) {
+        Err(msg) => Err(msg),
+        Ok(v) => Ok(v),
+    }
+}
 
 fn parse_nnn_or_symbol(arg: &String) -> AddressOrSymbol {
     match parse_nnn(arg) {

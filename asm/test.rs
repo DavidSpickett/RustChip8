@@ -62,6 +62,37 @@ mod test {
             assert_eq!(*e, g.repr());
         }
     }
+    
+    #[test]
+    fn hex_number_formatting_accepted() {
+        let asm_tests = [
+            // Lets assume that all instrs use standard parser
+            // functions and just check one of each
+
+            // 12 bit addresses
+            ("SYS 0x123", "SYS 0x123"),
+            ("SYS 0x23", "SYS 0x023"),
+            ("SYS 0x0000000023", "SYS 0x023"),
+            ("SYS 0x0000000323", "SYS 0x323"),
+
+            // Bytes
+            ("RND V0, 0x12", "RND V0, 0x12"),
+            ("RND V0, 0x2", "RND V0, 0x02"),
+            ("RND V0, 0x00000002", "RND V0, 0x02"),
+
+            // 16 bit values
+            (".word 0x1234", ".word 0x1234"),
+            (".word 0x234", ".word 0x0234"),
+            (".word 0x34", ".word 0x0034"),
+            (".word 0x4", ".word 0x0004"),
+            (".word 0x00000004", ".word 0x0004"),
+            (".word 0x00001234", ".word 0x1234"),
+        ];
+        for (input, expected) in asm_tests.iter() {
+            let in_str = input.to_string();
+            assert_eq!(*expected, parse_asm(&in_str)[0].repr());
+        }
+    }
 
     fn assert_asm_bitpatterns(asm: &String, expected: &[u16]) {
         for (instr, exp) in parse_asm(&asm).iter().zip(expected.iter()) {
@@ -215,6 +246,11 @@ mod test {
             0xFE1E,
         ];
         assert_asm_bitpatterns(&asm3, &expected3);
+
+        // Addr < 0xfff, just uses a single instr
+        let asm4 = "LD I, 0x123".to_string();
+        let expected4: Vec<u16> = vec![0xA123];
+        assert_asm_bitpatterns(&asm4, &expected4);
     }
 
     #[test]
