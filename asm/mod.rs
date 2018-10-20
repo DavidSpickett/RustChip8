@@ -90,7 +90,8 @@ pub fn parse_line(line: &str, symbols: &mut HashMap<String, u16>, current_addr: 
         }
         "JP"   => {
             if args.len() == 2 {
-                if args[0] != "V0" {
+                // Use the parser here to allow different formatting
+                if parse_vx(&args[0]).unwrap() != 0 {
                     panic!("Jump plus instruction can only use V0!");
                 }
 

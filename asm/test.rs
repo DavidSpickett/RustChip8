@@ -94,6 +94,11 @@ mod test {
 
             ("ADD VA, V10", "ADD V10, V10"),
             ("ADD V02, VF", "ADD V2, V15"),
+
+            // This instr always has V0, but it should verify it the same way
+            ("JP V0, 0x123", "JP V0, 0x123"),
+            ("JP v0, 0x456", "JP V0, 0x456"),
+            ("JP V000, 0x789", "JP V0, 0x789"),
         ];
         assert_asm_roundtrip(&asm_tests);
     }
