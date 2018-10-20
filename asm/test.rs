@@ -65,6 +65,7 @@ mod test {
 
     fn assert_asm_roundtrip(tests: &[(&str, &str)]) {
         for (input, expected) in tests.iter() {
+            println!("{}", input);
             let in_str = input.to_string();
             assert_eq!(*expected, parse_asm(&in_str)[0].repr());
         }
@@ -77,6 +78,19 @@ mod test {
             ("jp 0x123", "JP 0x123"),
             ("add V0, V1", "ADD V0, V1"),
             (".WORD 0x1234", ".word 0x1234"),
+        ];
+        assert_asm_roundtrip(&asm_tests);
+    }
+
+    #[test]
+    fn either_case_and_hex_v_regs() {
+        let asm_tests = [
+            ("ADD V0, V1", "ADD V0, V1"),
+            ("ADD v0, V1", "ADD V0, V1"),
+            ("ADD V0, v1", "ADD V0, V1"),
+
+            ("ADD VA, V10", "ADD V10, V10"),
+            ("ADD V02, VF", "ADD V2, V15"),
         ];
         assert_asm_roundtrip(&asm_tests);
     }
@@ -105,6 +119,9 @@ mod test {
             (".word 0x4", ".word 0x0004"),
             (".word 0x00000004", ".word 0x0004"),
             (".word 0x00001234", ".word 0x1234"),
+
+            //Mixed case letters
+            (".word 0xFaBc", ".word 0xFABC"),
         ];
         assert_asm_roundtrip(&asm_tests);
     }

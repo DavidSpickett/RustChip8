@@ -174,7 +174,7 @@ macro_rules! format_nnn {
     () => (
         fn get_formatted_args(&self) -> String {
             match self.nnn {
-                AddressOrSymbol::Address(a) => format!("0x{:03x}", a),
+                AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
                 AddressOrSymbol::Symbol(ref s) => format!("{}", s),
             }
         }
@@ -228,7 +228,7 @@ impl Instr for WordInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("0x{:04x}", self.core.opcode)
+        format!("0x{:04X}", self.core.opcode)
     }
 
     fn exec(&self, _c8: &mut Chip8System) {
@@ -402,7 +402,7 @@ impl Instr for SkipEqualInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02x}", self.vx, self.kk)
+        format!("V{}, 0x{:02X}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -436,7 +436,7 @@ impl Instr for SkipNotEqualInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02x}", self.vx, self.kk)
+        format!("V{}, 0x{:02X}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -470,7 +470,7 @@ impl Instr for LoadByteInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02x}", self.vx, self.kk)
+        format!("V{}, 0x{:02X}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -825,7 +825,7 @@ impl Instr for LoadIInstr {
 
     fn get_formatted_args(&self) -> String {
         match self.nnn {
-            AddressOrSymbol::Address(a) => format!("I, 0x{:03x}", a),
+            AddressOrSymbol::Address(a) => format!("I, 0x{:03X}", a),
             AddressOrSymbol::Symbol(ref s) => format!("I, {}", s),
         }
     }
@@ -859,7 +859,7 @@ impl Instr for AddByteInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02x}", self.vx, self.kk)
+        format!("V{}, 0x{:02X}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1197,7 +1197,7 @@ impl Instr for RandomInstr {
     impl_instr!();
 
     fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02x}", self.vx, self.kk)
+        format!("V{}, 0x{:02X}", self.vx, self.kk)
     }
 
     fn exec(&self, c8: &mut Chip8System) {
@@ -1299,7 +1299,7 @@ impl Instr for JumpPlusVZeroInstr {
 
     fn get_formatted_args(&self) -> String {
         match self.nnn {
-            AddressOrSymbol::Address(a) => format!("V0, 0x{:03x}", a),
+            AddressOrSymbol::Address(a) => format!("V0, 0x{:03X}", a),
             AddressOrSymbol::Symbol(ref s) => format!("V0, {}", s),
         }
     }

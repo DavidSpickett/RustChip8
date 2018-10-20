@@ -318,21 +318,29 @@ fn check_num_args(mnemonic: &str, num: usize) {
 }
 
 fn parse_vx(arg: &String) -> Result<u8, String> {
-    if arg.chars().nth(0).unwrap() != 'V' {
+    let c1 = arg.chars().nth(0).unwrap();
+    if (c1 != 'V') && (c1 != 'v') {
         return Err("Does not begin with \"V\"".to_string()); 
     }
+
     let num = &arg[1..];
+    let idx: u8;
+
     match num.parse::<u8>() {
-        Err(msg) => Err(format!("Invalid index {}: {}", num, msg)),
-        Ok(v) => {
-            if v > 15 {
-                return Err("V register number must be < 16".to_string());
-            } else
-            {
-                return Ok(v);
+        Err(_) => {
+            match u8::from_str_radix(&arg[1..], 16) {
+                Err(_) => return Err(format!("Invalid V register: \"{}\"", arg)),
+                Ok(v) => idx = v,
             }
         }
+        Ok(v) => idx = v,
     }
+
+    if idx > 0xF {
+        return Err("V register index cannot be > 0xF".to_string());
+    }
+
+    Ok(idx)
 }
 
 fn parse_hex(arg: &String) -> Result<u16, &str> {
