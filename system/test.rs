@@ -6,6 +6,8 @@ mod test {
     use std::collections::HashSet;
     extern crate rand;
     use system::test::test::rand::{Rng, thread_rng};
+    extern crate itertools;
+    use self::itertools::Itertools;
 
     #[test]
     fn run_bc_test_rom() {
@@ -45,7 +47,8 @@ mod test {
         --@@---@-@-------@@---@-@--@----@----@----@-@---@@--@-@---@@----\n\
         --@-@--@@@-------@-@--@@----@---@----@----@-@--@-@--@@----@-----\n\
         --@-@----@-------@-@--@------@--@----@----@-@--@-@--@-----@-----\n\
-        --@@-----@-------@@----@@--@@----@@--@@@---@----@@---@@---@-@---\n";
+        --@@-----@-------@@----@@--@@----@@--@@@---@----@@---@@---@-@---\n\
+        -------@@@------------------------------------------------------";
        
         'running: loop {
             let instr = c8.fetch_and_decode();
@@ -350,7 +353,8 @@ mod test {
         ----------------------------------------------------------------\n\
         ----------------------------------------------------------------\n\
         ----------------------------------------------------------------\n\
-        ----------------------------------------------------------------\n";
+        ----------------------------------------------------------------\n\
+        ----------------------------------------------------------------";
 
     #[test]
     fn basic_instr_building() {
@@ -489,6 +493,114 @@ mod test {
         let ins = Box::new(SysInstr::create_with_symbol("xyz".to_string())) as Box<Instr>;
         c8.execute(&ins);
     }
+
+    fn make_sprite_asm(sprite: &String) -> Vec<String> {
+        let mut sprite_data: [u8; 8*16] = [0; 8*16];
+
+        for (ln, line) in sprite.lines().enumerate() {
+            for (p, c) in line.chars().enumerate() {
+                let sprite_idx = ((ln/8)*4) + (p/8);
+                let sprite_line = ln % 8;
+                let char_idx = p % 8;
+                if c == '@' {
+                    sprite_data[(sprite_idx*8)+sprite_line] |= 1 << (7-char_idx);
+                }
+            }
+        }
+
+        let mut data: Vec<u16> = vec![];
+        for mut bytes in &sprite_data.into_iter().chunks(2) {
+            data.push(((*bytes.next().unwrap() as u16) << 8) | (*bytes.next().unwrap() as u16));
+        }
+
+        data.iter().map(|v| format!(".word 0x{:04x}", v) ).collect()
+    }
+
+    #[test]
+    fn draw_sprite_from_rom() {
+        let sprite = "\
+            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\
+            @------------------------------@\n\
+            @-@@@@@@@@@@@@@@@@@@@@@@@@@@@@-@\n\
+            @-@--------------------------@-@\n\
+            @-@-@@@@@@@@@@@@@@@@@@@@@@@@-@-@\n\
+            @-@-@----------------------@-@-@\n\
+            @-@-@-@@@@@@@@@@@@@@@@@@@@-@-@-@\n\
+            @-@-@-@------------------@-@-@-@\n\
+            @-@-@-@-@@@@@@@@@@@@@@@@-@-@-@-@\n\
+            @-@-@-@-@--------------@-@-@-@-@\n\
+            @-@-@-@-@-@@@@@@@@@@@@-@-@-@-@-@\n\
+            @-@-@-@-@-@---------@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@@@@@@@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@-----@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@@@-@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@-@-@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@-@-@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@@@-@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@-----@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@-@@@@@@@-@--@-@-@-@-@\n\
+            @-@-@-@-@-@---------@--@-@-@-@-@\n\
+            @-@-@-@-@-@@@@@@@@@@@@-@-@-@-@-@\n\
+            @-@-@-@-@--------------@-@-@-@-@\n\
+            @-@-@-@-@@@@@@@@@@@@@@@@-@-@-@-@\n\
+            @-@-@-@------------------@-@-@-@\n\
+            @-@-@-@@@@@@@@@@@@@@@@@@@@-@-@-@\n\
+            @-@-@----------------------@-@-@\n\
+            @-@-@@@@@@@@@@@@@@@@@@@@@@@@-@-@\n\
+            @-@--------------------------@-@\n\
+            @-@@@@@@@@@@@@@@@@@@@@@@@@@@@@-@\n\
+            @------------------------------@\n\
+            @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@".to_string();
+
+
+        let mut asm = make_sprite_asm(&sprite).iter().fold("".to_string(), |acc, l| acc + &"\n".to_string() + l);
+        asm = "\
+            JP start
+            sprite_data:".to_string() + &asm;
+        asm += &"
+        start:
+            LD V0, 0x10 // X
+            LD V1, 0x00 // Y
+            LD I, sprite_data
+            LD V2, 0x00 // Sprite counter
+            LD V3, 0x08 // I increment
+        loop:
+            DRW V0, V1, 8
+            ADD V0, 0x08 // Inc X
+            ADD V2, 0x01
+            ADD I, V3 // Point to new sprite
+            // If we've drawn all 16 sprites, end
+            SNE V2, 0x10
+            JP end
+            // If we haven't drawn the last sprite on the row...
+            SE V0, 0x30
+            // Continue to draw this row
+            JP loop
+            // Otherwise we need to increment Y and reset X
+            ADD V1, 0x08
+            LD V0, 0x10
+            JP loop
+        end:
+            JP end".to_string();
+
+        let instrs = parse_asm(&asm);
+        let rom = instr_to_data(&instrs);
+        let mut c8 = make_system(&rom);
+        let mut old_pc: u16 = 0xffff;
+
+        while c8.pc != old_pc {
+            old_pc = c8.pc;
+            let ins = c8.fetch_and_decode();
+            c8.execute(&ins);
+        }
+
+        // Convert to a screen dump for comparison
+        let pad = "----------------";
+        let expected = sprite.lines().map(|x| pad.to_owned() + &x.to_owned() + pad).join("\n");
+
+        assert_eq!(expected, c8.screen_to_str());
+    }
+
 
     fn randomise_regs(c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();

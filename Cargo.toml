@@ -6,6 +6,7 @@ authors = ["David Spickett"]
 [dependencies]
 sdl2 = "0.31"
 rand = "0.3.0"
+itertools = "0.7.3"
 
 [[bin]]
 name = "rchip8"

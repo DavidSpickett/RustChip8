@@ -98,6 +98,7 @@ impl Chip8System {
 
             if *pixel { row.push('@') } else { row.push('-') }
         }
+        ret.push_str(&row);
         ret
     }
     
