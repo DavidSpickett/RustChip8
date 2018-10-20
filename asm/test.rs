@@ -62,6 +62,24 @@ mod test {
             assert_eq!(*e, g.repr());
         }
     }
+
+    fn assert_asm_roundtrip(tests: &[(&str, &str)]) {
+        for (input, expected) in tests.iter() {
+            let in_str = input.to_string();
+            assert_eq!(*expected, parse_asm(&in_str)[0].repr());
+        }
+    }
+
+    #[test]
+    fn either_case_mnemonics() {
+        let asm_tests = [
+            ("cls", "CLS"),
+            ("jp 0x123", "JP 0x123"),
+            ("add V0, V1", "ADD V0, V1"),
+            (".WORD 0x1234", ".word 0x1234"),
+        ];
+        assert_asm_roundtrip(&asm_tests);
+    }
     
     #[test]
     fn hex_number_formatting_accepted() {
@@ -88,10 +106,7 @@ mod test {
             (".word 0x00000004", ".word 0x0004"),
             (".word 0x00001234", ".word 0x1234"),
         ];
-        for (input, expected) in asm_tests.iter() {
-            let in_str = input.to_string();
-            assert_eq!(*expected, parse_asm(&in_str)[0].repr());
-        }
+        assert_asm_roundtrip(&asm_tests);
     }
 
     fn assert_asm_bitpatterns(asm: &String, expected: &[u16]) {
