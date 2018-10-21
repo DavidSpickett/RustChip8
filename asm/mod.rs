@@ -39,10 +39,31 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
     instrs
 }
 
-fn split_asm_line(line: &str) -> Vec<(String, usize)> {
+
+#[derive(PartialEq, Debug)]
+struct AsmArg {
+    s: String,
+    pos: usize,
+}
+
+impl AsmArg {
+    fn new(s: String, pos: usize) -> AsmArg {
+        AsmArg{s, pos}
+    }
+
+    fn str_cmp(&self, other: &str) -> bool {
+        self.s == other
+    }
+
+    fn len(&self) -> usize {
+        self.s.len()
+    }
+}
+
+fn split_asm_line(line: &str) -> Vec<AsmArg> {
     let mut start = 0;
     let mut part = String::from("");
-    let mut parts: Vec<(String, usize)> = vec![];
+    let mut parts: Vec<AsmArg> = vec![];
     let terminators = [' ', '\t', ','];
 
     for (idx, c) in line.chars().enumerate() {
@@ -56,7 +77,7 @@ fn split_asm_line(line: &str) -> Vec<(String, usize)> {
             }
 
             if !part.is_empty() {
-                parts.push((part.to_owned(), start));
+                parts.push(AsmArg::new(part.to_owned(), start));
                 part.clear();
             }
         } else {
@@ -87,7 +108,7 @@ pub fn parse_line(line: &str,
         no_comments_line = no_comments_line.split_at(idx).0;
     }
 
-    let mut args = split_asm_line(no_comments_line).iter().map(|x| x.0.to_owned()).collect::<Vec<String>>();
+    let mut args = split_asm_line(no_comments_line);
 
     // Lines consisting of only whitespace
     if args.is_empty() {
@@ -98,17 +119,17 @@ pub fn parse_line(line: &str,
 
     // Check for labels
     if args.is_empty() {
-        if mnemonic.ends_with(":") {
+        if mnemonic.s.ends_with(":") {
             // Add a symbol for this address
-            symbols.insert(mnemonic[..mnemonic.len()-1].to_string(), current_addr);
+            symbols.insert(mnemonic.s[..mnemonic.len()-1].to_string(), current_addr);
             return Ok(instrs);
         }
     }
 
     // Now we know it's not a label we can normalise the case
-    mnemonic = mnemonic.to_uppercase();
+    mnemonic.s = mnemonic.s.to_uppercase();
 
-    if mnemonic == "JP" {
+    if mnemonic.s == "JP" {
         // JP can have one or two args
         if (args.len() == 0) || (args.len() > 2) {
             return Err(format!("Expected 1 or 2 args for JP instruction, got {}", args.len()));
@@ -120,7 +141,7 @@ pub fn parse_line(line: &str,
         }
     }
 
-    match mnemonic.as_str() {
+    match mnemonic.s.as_str() {
         // No arguments
         "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
         "RET"   => instrs.push(Box::new(RetInstr::create())),
@@ -236,7 +257,7 @@ pub fn parse_line(line: &str,
                     return Err(format!("Invalid arguments for ADD instruction"));
                 }
             // I, Vx
-            } else if args[0] == "I" {
+            } else if args[0].str_cmp("I") {
                 instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
                 return Err(format!("Invalid args to ADD instruction"));
@@ -251,19 +272,19 @@ pub fn parse_line(line: &str,
                 } else if let Ok(b) = parse_vx(&args[1]) {
                     // LD V, V
                     instrs.push(Box::new(MovRegInstr::create(a, b)));
-                } else if args[1] == "DT" {
+                } else if args[1].str_cmp("DT") {
                     // LD V, DT
                     instrs.push(Box::new(GetDelayTimerInstr::create(a)));
-                } else if args[1] == "K" {
+                } else if args[1].str_cmp("K") {
                     // LD V, K
                     instrs.push(Box::new(WaitForKeyInstr::create(a)));
-                } else if args[1] == "[I]" {
+                } else if args[1].str_cmp("[I]") {
                     // LD V, [I]
                     instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
                 } else {
                     return Err(format!("Invalid args to LD instruction"));
                 }
-            } else if args[0] == "I" {
+            } else if args[0].str_cmp("I") {
                 // Special 16 bit address sequence
                 if let Ok(addr) = parse_extended_addr(&args[1]) {
                     // TODO: this check should go elsewhere, checking number
@@ -321,19 +342,19 @@ pub fn parse_line(line: &str,
                         }
                     }
                 }
-            } else if args[0] == "DT" {
+            } else if args[0].str_cmp("DT") {
                 // LD DT, V
                 instrs.push(Box::new(SetDelayTimerInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0] == "ST" {
+            } else if args[0].str_cmp("ST") {
                 // LD ST, V
                 instrs.push(Box::new(SetSoundTimerInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0] == "F" {
+            } else if args[0].str_cmp("F") {
                 // LD F, V
                 instrs.push(Box::new(GetDigitAddrInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0] == "B" {
+            } else if args[0].str_cmp("B") {
                 // LD B, V
                 instrs.push(Box::new(StoreBCDInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0] == "[I]" {
+            } else if args[0].str_cmp("[I]") {
                 // LD [I], V
                 instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
@@ -346,41 +367,42 @@ pub fn parse_line(line: &str,
                     parse_vx(&args[0]).unwrap(),
                     parse_vx(&args[1]).unwrap(),
                     parse_n(&args[2]).unwrap()))),
-        _ => return Err(format!("Unrecognised mnemonic: {}", mnemonic)),
+        //TODO: this will print it normalised, not as you typed it
+        _ => return Err(format!("Unrecognised mnemonic: {}", mnemonic.s)),
     }
 
     Ok(instrs)
 }
 
-fn check_num_args(mnemonic: &str, num: usize) -> Result<usize, String> {
-    let expected: usize = match mnemonic {
+fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, String> {
+    let expected: usize = match &mnemonic.s[..] {
         "CLS" | "RET" => 0,
         "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".WORD" => 1,
         // Some variants of LD only have 1 variable arg, but for asm
         // purposes they all have two
         "LD" | "ADD" | "SE" | "SNE" | "OR" | "AND" | "XOR" | "SUB" | "SUBN" | "RND" => 2,
         "DRW" => 3,
-        _ => return Err(format!("Can't verify number of args for mnemonic: {}", mnemonic)),
+        _ => return Err(format!("Can't get number of args for mnemonic: {}", mnemonic.s)),
     };
     if expected != num {
-        return Err(format!("Expected {} args for {}, got {}", expected, mnemonic, num));
+        return Err(format!("Expected {} args for {}, got {}", expected, mnemonic.s, num));
     }
     Ok(num)
 }
 
-fn parse_vx(arg: &String) -> Result<u8, String> {
-    let c1 = arg.chars().nth(0).unwrap();
+fn parse_vx(arg: &AsmArg) -> Result<u8, String> {
+    let c1 = arg.s.chars().nth(0).unwrap();
     if (c1 != 'V') && (c1 != 'v') {
         return Err("Does not begin with \"V\"".to_string()); 
     }
 
-    let num = &arg[1..];
+    let num = &arg.s[1..];
     let idx: u8;
 
     match num.parse::<u8>() {
         Err(_) => {
-            match u8::from_str_radix(&arg[1..], 16) {
-                Err(_) => return Err(format!("Invalid V register: \"{}\"", arg)),
+            match u8::from_str_radix(&arg.s[1..], 16) {
+                Err(_) => return Err(format!("Invalid V register: \"{}\"", arg.s)),
                 Ok(v) => idx = v,
             }
         }
@@ -394,21 +416,21 @@ fn parse_vx(arg: &String) -> Result<u8, String> {
     Ok(idx)
 }
 
-fn parse_hex(arg: &String) -> Result<u16, &str> {
+fn parse_hex(arg: &AsmArg) -> Result<u16, &str> {
     if arg.len() < 2 {
         return Err("Arg too short to be a hex number");
     }
-    if &arg[..2] != "0x" {
+    if &arg.s[..2] != "0x" {
         return Err("Hex number must start with \"0x\"");
     }
-    match u16::from_str_radix(&arg[2..], 16) {
+    match u16::from_str_radix(&arg.s[2..], 16) {
         //TODO: we're masking range errors here
         Err(_) => Err("Invalid hex number"),
         Ok(v) => Ok(v), 
     }
 }
 
-fn parse_xx(arg: &String) -> Result<u8, &str> {
+fn parse_xx(arg: &AsmArg) -> Result<u8, &str> {
     match parse_hex(arg) {
         Err(msg) => Err(msg),
         Ok(v) => {
@@ -420,7 +442,7 @@ fn parse_xx(arg: &String) -> Result<u8, &str> {
     }
 }
 
-fn parse_nnn(arg: &String) -> Result<u16, &str> {
+fn parse_nnn(arg: &AsmArg) -> Result<u16, &str> {
     match parse_hex(arg) {
         Err(msg) => Err(msg),
         Ok(v) => {
@@ -432,23 +454,23 @@ fn parse_nnn(arg: &String) -> Result<u16, &str> {
     }
 }
 
-fn parse_extended_addr(arg: &String) -> Result<u16, &str> {
+fn parse_extended_addr(arg: &AsmArg) -> Result<u16, &str> {
     match parse_hex(arg) {
         Err(msg) => Err(msg),
         Ok(v) => Ok(v),
     }
 }
 
-fn parse_nnn_or_symbol(arg: &String) -> AddressOrSymbol {
+fn parse_nnn_or_symbol(arg: &AsmArg) -> AddressOrSymbol {
     match parse_nnn(arg) {
         Ok(v) => AddressOrSymbol::Address(v),
         // Try to lookup anything else as a symbol
-        Err(_) => AddressOrSymbol::Symbol(arg.to_owned()),
+        Err(_) => AddressOrSymbol::Symbol(arg.s.to_owned()),
     }
 }
 
-fn parse_n(arg: &String) -> Result<u8, String> {
-    match arg.parse::<u8>() {
+fn parse_n(arg: &AsmArg) -> Result<u8, String> {
+    match arg.s.parse::<u8>() {
         Err(msg) => Err(msg.to_string()),
         Ok(v) => {
             if v > 15 {

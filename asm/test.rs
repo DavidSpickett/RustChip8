@@ -4,8 +4,8 @@ mod test {
 
     #[test]
     fn expected_parse_vx() {
-        assert_eq!(u8::from(1), parse_vx(&String::from("V1")).unwrap());
-        match parse_vx(&String::from("B1")) {
+        assert_eq!(u8::from(1), parse_vx(&AsmArg::new(String::from("V1"), 0)).unwrap());
+        match parse_vx(&AsmArg::new(String::from("B1"), 0)) {
             Ok(_) => panic!(),
             Err(msg) => assert_eq!("Does not begin with \"V\"", msg),
         }
@@ -13,23 +13,23 @@ mod test {
 
     #[test]
     fn expected_parse_xx() {
-        assert_eq!(u8::from(0x12), parse_xx(&String::from("0x12")).unwrap());
+        assert_eq!(u8::from(0x12), parse_xx(&AsmArg::new(String::from("0x12"), 0)).unwrap());
     }
 
     #[test]
     fn expected_split_asm_line() {
         // Note that we expect comments to be gone by this point
-        let tests: Vec<(&str, Vec<(String, usize)>)> = vec![
+        let tests: Vec<(&str, Vec<AsmArg>)> = vec![
             ("CLS", vec![
-                ("CLS".to_string(), 0)]),
+                AsmArg::new("CLS".to_string(), 0)]),
             ("JP 0x123", vec![
-                ("JP".to_string(), 0),
-                ("0x123".to_string(), 3)]),
+                AsmArg::new("JP".to_string(), 0),
+                AsmArg::new("0x123".to_string(), 3)]),
             ("DRW ,V0  ,v1,   00012", vec![
-                ("DRW".to_string(), 0),
-                ("V0".to_string(), 5),
-                ("v1".to_string(), 10),
-                ("00012".to_string(), 16)]),
+                AsmArg::new("DRW".to_string(), 0),
+                AsmArg::new("V0".to_string(), 5),
+                AsmArg::new("v1".to_string(), 10),
+                AsmArg::new("00012".to_string(), 16)]),
         ];
         for (input, expected) in tests {
             assert_eq!(expected, split_asm_line(input));
