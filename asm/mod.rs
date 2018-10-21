@@ -89,21 +89,18 @@ fn split_asm_line(line: &str) -> Vec<AsmArg> {
         let is_terminator = terminators.contains(&c);
         let is_last = idx == line.len()-1;
 
-        if is_terminator || is_last {
-            // TODO: this logic is a bit tortuous
-            if is_last && !is_terminator {
-                part.push(c);
-            }
-
-            if !part.is_empty() {
-                parts.push(AsmArg::new(part.to_owned(), start));
-                part.clear();
-            }
-        } else {
+        if !is_terminator {
             if part.is_empty() {
                 start = idx;
             }
             part.push(c);
+        }
+
+        if is_terminator || is_last {
+            if !part.is_empty() {
+                parts.push(AsmArg::new(part.to_owned(), start));
+                part.clear();
+            }
         }
     }
 
@@ -221,26 +218,11 @@ pub fn parse_line(line: &str,
                         }
                     }
                 }
-                                // Two arguments
-                "OR"    => instrs.push(Box::new(OrRegInstr::create(
-                            parse_vx(&args[0]).unwrap(),
-                            parse_vx(&args[1]).unwrap()))),
-                "XOR"    => instrs.push(Box::new(XORRegInstr::create(
-                            parse_vx(&args[0]).unwrap(),
-                            parse_vx(&args[1]).unwrap()))),
-                "AND"    => instrs.push(Box::new(AndRegInstr::create(
-                            parse_vx(&args[0]).unwrap(),
-                            parse_vx(&args[1]).unwrap()))),
-                "SUB"    => instrs.push(Box::new(SubRegInstr::create(
-                            parse_vx(&args[0]).unwrap(),
-                            parse_vx(&args[1]).unwrap()))),
-                "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(
-                            parse_vx(&args[0]).unwrap(),
-                            parse_vx(&args[1]).unwrap()))),
-                "RND"    => instrs.push(Box::new(RandomInstr::create(
-                            parse_vx(&args[0]).unwrap(),
-                            parse_xx(&args[1]).unwrap()))),
 
+                // Two arguments
+                "RND"    => instrs.push(Box::new(RandomInstr::create(
+                                parse_vx(&args[0]).unwrap(),
+                                parse_xx(&args[1]).unwrap()))),
                 "SE"     => {
                     let vx = parse_vx(&args[0]).unwrap();
                     // Byte or register versions
@@ -419,6 +401,26 @@ pub fn parse_line(line: &str,
                 _ => panic!("Unknown mnemonic {} with VX args", mnemonic.s),
             }
         }
+        ArgsType::VXVY => {
+            let x = match parse_vx(&args[0]) {
+                Err((msg, pos)) => return Err((msg, pos)),
+                Ok(v) => v,
+            };
+
+            let y = match parse_vx(&args[1]) {
+                Err((msg, pos)) => return Err((msg, pos)),
+                Ok(v) => v,
+            };
+
+            match mnemonic.s.as_str() {
+                "OR"    => instrs.push(Box::new(OrRegInstr::create(x, y))),
+                "XOR"    => instrs.push(Box::new(XORRegInstr::create(x, y))),
+                "AND"    => instrs.push(Box::new(AndRegInstr::create(x, y))),
+                "SUB"    => instrs.push(Box::new(SubRegInstr::create(x, y))),
+                "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(x, y))),
+                _ => panic!("Unknown mnemonic {} with VXVY args", mnemonic.s),
+            }
+        }
     }
 
     Ok(instrs)
@@ -427,11 +429,13 @@ pub fn parse_line(line: &str,
 enum ArgsType {
     Custom,
     VX,
+    VXVY,
 }
 
 fn get_args_type(mnemonic: &AsmArg) -> ArgsType {
     match mnemonic.s.as_str() {
         "SHR" | "SHL" | "SKP" | "SKNP" => ArgsType::VX,
+        "OR" | "XOR" | "AND" | "SUB" | "SUBN" => ArgsType::VXVY,
         _ => ArgsType::Custom,
     }
 }

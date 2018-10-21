@@ -30,6 +30,13 @@ mod test {
                 AsmArg::new("V0".to_string(), 5),
                 AsmArg::new("v1".to_string(), 10),
                 AsmArg::new("00012".to_string(), 16)]),
+            ("JP F", vec![
+                AsmArg::new("JP".to_string(), 0),
+                AsmArg::new("F".to_string(), 3)]),
+            ("AND V0, abc", vec![
+                AsmArg::new("AND".to_string(), 0),
+                AsmArg::new("V0".to_string(), 4),
+                AsmArg::new("abc".to_string(), 8)]),
         ];
         for (input, expected) in tests {
             assert_eq!(expected, split_asm_line(input));
@@ -367,11 +374,62 @@ V register index cannot be > 0xF"),
 0: SKP Vfood
        ^
 Invalid V register: \"Vfood\""),
+("SKP food",
+"\
+0: SKP food
+       ^
+VX arg does not begin with \"V\""),
+("SKP f",
+"\
+0: SKP f
+       ^
+VX arg does not begin with \"V\""),
 ("SKNP V1F",
 "\
 0: SKNP V1F
         ^
 V register index cannot be > 0xF"),
+("SUB f0, V2",
+"\
+0: SUB f0, V2
+       ^
+VX arg does not begin with \"V\""),
+("SUBN V0, Z0",
+"\
+0: SUBN V0, Z0
+            ^
+VX arg does not begin with \"V\""),
+("XOR V21, V0",
+"\
+0: XOR V21, V0
+       ^
+V register index cannot be > 0xF"),
+("XOR V1, V33",
+"\
+0: XOR V1, V33
+           ^
+V register index cannot be > 0xF"),
+("AND 0x12, V0",
+"\
+0: AND 0x12, V0
+       ^
+VX arg does not begin with \"V\""),
+("AND V0, 32",
+"\
+0: AND V0, 32
+           ^
+VX arg does not begin with \"V\""),
+// Had an issue with single char args
+("OR V0, 3",
+"\
+0: OR V0, 3
+          ^
+VX arg does not begin with \"V\""),
+("OR 1, vf",
+"\
+0: OR 1, vf
+      ^
+VX arg does not begin with \"V\""),
         ];
         for (input, expected_err) in tests {
             match parse_asm(&String::from(input)) {
