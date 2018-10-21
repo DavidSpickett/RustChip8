@@ -17,6 +17,26 @@ mod test {
     }
 
     #[test]
+    fn expected_split_asm_line() {
+        // Note that we expect comments to be gone by this point
+        let tests: Vec<(&str, Vec<(String, usize)>)> = vec![
+            ("CLS", vec![
+                ("CLS".to_string(), 0)]),
+            ("JP 0x123", vec![
+                ("JP".to_string(), 0),
+                ("0x123".to_string(), 3)]),
+            ("DRW ,V0  ,v1,   00012", vec![
+                ("DRW".to_string(), 0),
+                ("V0".to_string(), 5),
+                ("v1".to_string(), 10),
+                ("00012".to_string(), 16)]),
+        ];
+        for (input, expected) in tests {
+            assert_eq!(expected, split_asm_line(input));
+        }
+    }
+
+    #[test]
     fn basic_assembly_test() {
         let expected = [
             "SYS 0x123",

@@ -39,6 +39,37 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
     instrs
 }
 
+fn split_asm_line(line: &str) -> Vec<(String, usize)> {
+    let mut start = 0;
+    let mut part = String::from("");
+    let mut parts: Vec<(String, usize)> = vec![];
+    let terminators = [' ', '\t', ','];
+
+    for (idx, c) in line.chars().enumerate() {
+        let is_terminator = terminators.contains(&c);
+        let is_last = idx == line.len()-1;
+
+        if is_terminator || is_last {
+            // TODO: this logic is a bit tortuous
+            if is_last && !is_terminator {
+                part.push(c);
+            }
+
+            if !part.is_empty() {
+                parts.push((part.to_owned(), start));
+                part.clear();
+            }
+        } else {
+            if part.is_empty() {
+                start = idx;
+            }
+            part.push(c);
+        }
+    }
+
+    parts
+}
+
 pub fn parse_line(line: &str,
                   symbols: &mut HashMap<String, u16>, 
                   current_addr: u16)
@@ -47,7 +78,7 @@ pub fn parse_line(line: &str,
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
     // will take care of that.
-
+    split_asm_line(line);
     let mut instrs: Vec<Box<Instr>> = vec![];
 
     let comment_chars = "//";
@@ -56,8 +87,7 @@ pub fn parse_line(line: &str,
         no_comments_line = no_comments_line.split_at(idx).0;
     }
 
-    let parts = no_comments_line.split_whitespace();
-    let mut args = parts.map(|x| x.replace(",", "")).collect::<Vec<String>>();
+    let mut args = split_asm_line(no_comments_line).iter().map(|x| x.0.to_owned()).collect::<Vec<String>>();
 
     // Lines consisting of only whitespace
     if args.is_empty() {
