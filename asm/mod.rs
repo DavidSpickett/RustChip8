@@ -162,253 +162,278 @@ pub fn parse_line(line: &str,
         }
     }
 
-    match mnemonic.s.as_str() {
-        // No arguments
-        "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
-        "RET"   => instrs.push(Box::new(RetInstr::create())),
-        // Single argument
-        ".WORD" => instrs.push(Box::new(WordInstr::create(
-                    parse_extended_addr(&args[0]).unwrap()))),
-        "SYS"   => {
-            match parse_nnn_or_symbol(&args[0]) {
-                AddressOrSymbol::Symbol(s) => {
-                    instrs.push(Box::new(SysInstr::create_with_symbol(s)));
-                }
-                AddressOrSymbol::Address(a) => {
-                    instrs.push(Box::new(SysInstr::create(a)));
-                }
-            }
-        }
-        "JP"   => {
-            if args.len() == 2 {
-                // Use the parser here to allow different formatting
-                if parse_vx(&args[0]).unwrap() != 0 {
-                    return Err((
-                            format!("Jump plus instruction can only use V0!"),
-                            args[0].pos));
-                }
-
-                // JP V0, addr so use the 2nd arg
-                match parse_nnn_or_symbol(&args[1]) {
-                    AddressOrSymbol::Symbol(s) => {
-                        instrs.push(Box::new(JumpPlusVZeroInstr::create_with_symbol(s)));
-                    }
-                    AddressOrSymbol::Address(a) => {
-                        instrs.push(Box::new(JumpPlusVZeroInstr::create(a)));
-                    }
-                }
-            } else {
-                //Usual JP addr
-                match parse_nnn_or_symbol(&args[0]) {
-                    AddressOrSymbol::Symbol(s) => {
-                        instrs.push(Box::new(JumpInstr::create_with_symbol(s)));
-                    }
-                    AddressOrSymbol::Address(a) => {
-                        instrs.push(Box::new(JumpInstr::create(a)));
-                    }
-                }
-            }
-        }
-        "CALL" => {
-            match parse_nnn_or_symbol(&args[0]) {
-                AddressOrSymbol::Symbol(s) => {
-                    instrs.push(Box::new(CallInstr::create_with_symbol(s)));
-                }
-                AddressOrSymbol::Address(a) => {
-                    instrs.push(Box::new(CallInstr::create(a)));
-                }
-            }
-        }
-        "SHR"   => instrs.push(Box::new(ShrRegInstr::create(parse_vx(&args[0]).unwrap()))),
-        "SHL"   => instrs.push(Box::new(ShlRegInstr::create(parse_vx(&args[0]).unwrap()))),
-        "SKP"   => instrs.push(Box::new(SkipKeyIfPressedInstr::create(parse_vx(&args[0]).unwrap()))),
-        "SKNP"  => instrs.push(Box::new(SkipKeyIfNotPressedInstr::create(parse_vx(&args[0]).unwrap()))),
-
-        // Two arguments
-        "OR"    => instrs.push(Box::new(OrRegInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_vx(&args[1]).unwrap()))),
-        "XOR"    => instrs.push(Box::new(XORRegInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_vx(&args[1]).unwrap()))),
-        "AND"    => instrs.push(Box::new(AndRegInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_vx(&args[1]).unwrap()))),
-        "SUB"    => instrs.push(Box::new(SubRegInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_vx(&args[1]).unwrap()))),
-        "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_vx(&args[1]).unwrap()))),
-        "RND"    => instrs.push(Box::new(RandomInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_xx(&args[1]).unwrap()))),
-
-        "SE"     => {
-            let vx = parse_vx(&args[0]).unwrap();
-            // Byte or register versions
-            if let Ok(a) = parse_vx(&args[1]) {
-                instrs.push(Box::new(SkipIfRegsEqualInstr::create(vx, a)))
-            } else if let Ok(a) = parse_xx(&args[1]) {
-                instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
-            } else {
-                return Err((
-                        format!("Invalid argument 2 for SE instruction"),
-                        args[1].pos));
-            }
-        },
-
-        "SNE"   => {
-            let vx = parse_vx(&args[0]).unwrap();
-            // Byte or register versions
-            if let Ok(a) = parse_vx(&args[1]) {
-                instrs.push(Box::new(SkipIfRegsNotEqualInstr::create(vx, a)))
-            } else if let Ok(a) = parse_xx(&args[1]) {
-                instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
-            } else {
-                return Err((
-                        format!("Invalid argument 2 for SNE instruction"),
-                        args[1].pos));
-            }
-        }
-
-        "ADD"   => {
-            if let Ok(a) = parse_vx(&args[0]) {
-                // Vx, byte
-                if let Ok(b) = parse_vx(&args[1]) {
-                    instrs.push(Box::new(AddRegInstr::create(a, b)));
-                // Vx, Vy
-                } else if let Ok(b) = parse_xx(&args[1]) {
-                    instrs.push(Box::new(AddByteInstr::create(a, b)));
-                } else {
-                    return Err((
-                            format!("Invalid arguments for ADD instruction"),
-                            args[1].pos));
-                }
-            // I, Vx
-            } else if args[0].str_cmp("I") {
-                instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
-            } else {
-                return Err((
-                        format!("Invalid args for ADD instruction"),
-                        args[1].pos));
-            }
-        }
-
-        "LD"    => {
-            if let Ok(a) = parse_vx(&args[0]) {
-                if let Ok(b) = parse_xx(&args[1]) {
-                    // LD V, byte
-                    instrs.push(Box::new(LoadByteInstr::create(a, b)));
-                } else if let Ok(b) = parse_vx(&args[1]) {
-                    // LD V, V
-                    instrs.push(Box::new(MovRegInstr::create(a, b)));
-                } else if args[1].str_cmp("DT") {
-                    // LD V, DT
-                    instrs.push(Box::new(GetDelayTimerInstr::create(a)));
-                } else if args[1].str_cmp("K") {
-                    // LD V, K
-                    instrs.push(Box::new(WaitForKeyInstr::create(a)));
-                } else if args[1].str_cmp("[I]") {
-                    // LD V, [I]
-                    instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
-                } else {
-                    return Err((
-                            format!("Invalid args to LD instruction"),
-                            args[1].pos));
-                }
-            } else if args[0].str_cmp("I") {
-                // Special 16 bit address sequence
-                if let Ok(addr) = parse_extended_addr(&args[1]) {
-                    // TODO: this check should go elsewhere, checking number
-                    // of digits isn't a great way to go
-                    if addr <= 0xFFF {
-                        instrs.push(Box::new(LoadIInstr::create(addr)));
-                    } else {
-                        // We're going to change I anyway so we can trash it
-                        let rest_of_addr = addr - 0xFFF;
-                        instrs.push(Box::new(LoadIInstr::create(0xFFF)));
-
-                        // Number of ADD I, Vx we have to do with 0xFF
-                        // Can't think of another way other than reserving a register here
-                        let regnum: u8 = 14;
-                        let max_regval: u16 = 0xFF;
-                        let num_adds = (rest_of_addr / max_regval) as u8;
-                        // Remainder value for the last ADD
-                        let remainder = (rest_of_addr % max_regval) as u8;
-
-                        if num_adds != 0 {
-                            instrs.push(Box::new(LoadByteInstr::create(regnum, max_regval as u8)));
-                            for _ in 0..num_adds {
-                                instrs.push(Box::new(AddIVInstr::create(regnum)));
-                            }
-                        }
-
-                        if remainder != 0 {
-                            instrs.push(Box::new(LoadByteInstr::create(regnum, remainder)));
-                            instrs.push(Box::new(AddIVInstr::create(regnum)));
-                        }
-
-                        /* TADA! You just loaded a 16 bit address into I
-                           but gave up a register temporarily to do it.
-
-                           The reason you can't save/restore is as follows:
-                           - Set I to some location (font memory/high addr?)
-                           - Save V0 to memory
-                           - Do stuff with it to get I to the high address
-                           - Then set I back to the saved V0 location
-                           ....
-
-                           Which defeats the point of this whole silly exercise.
-                           Also restoring the memory you save to is tricky.
-                        */
-                    }
-                } else {
-                    // LD I, nnn
-                    // Using the *2nd* argument!
-                    match parse_nnn_or_symbol(&args[1]) {
+    match get_args_type(&mnemonic) {
+        ArgsType::Custom => {
+            match mnemonic.s.as_str() {
+                // No arguments
+                "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
+                "RET"   => instrs.push(Box::new(RetInstr::create())),
+                // Single argument
+                ".WORD" => instrs.push(Box::new(WordInstr::create(
+                            parse_extended_addr(&args[0]).unwrap()))),
+                "SYS"   => {
+                    match parse_nnn_or_symbol(&args[0]) {
                         AddressOrSymbol::Symbol(s) => {
-                            instrs.push(Box::new(LoadIInstr::create_with_symbol(s)));
+                            instrs.push(Box::new(SysInstr::create_with_symbol(s)));
                         }
                         AddressOrSymbol::Address(a) => {
-                            instrs.push(Box::new(LoadIInstr::create(a)));
+                            instrs.push(Box::new(SysInstr::create(a)));
                         }
                     }
                 }
-            } else if args[0].str_cmp("DT") {
-                // LD DT, V
-                instrs.push(Box::new(SetDelayTimerInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0].str_cmp("ST") {
-                // LD ST, V
-                instrs.push(Box::new(SetSoundTimerInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0].str_cmp("F") {
-                // LD F, V
-                instrs.push(Box::new(GetDigitAddrInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0].str_cmp("B") {
-                // LD B, V
-                instrs.push(Box::new(StoreBCDInstr::create(parse_vx(&args[1]).unwrap())));
-            } else if args[0].str_cmp("[I]") {
-                // LD [I], V
-                instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
-            } else {
-                return Err((
-                        format!("Invalid args to LD instruction"),
-                        args[0].pos));
+                "JP"   => {
+                    if args.len() == 2 {
+                        // Use the parser here to allow different formatting
+                        if parse_vx(&args[0]).unwrap() != 0 {
+                            return Err((
+                                    format!("Jump plus instruction can only use V0!"),
+                                    args[0].pos));
+                        }
+
+                        // JP V0, addr so use the 2nd arg
+                        match parse_nnn_or_symbol(&args[1]) {
+                            AddressOrSymbol::Symbol(s) => {
+                                instrs.push(Box::new(JumpPlusVZeroInstr::create_with_symbol(s)));
+                            }
+                            AddressOrSymbol::Address(a) => {
+                                instrs.push(Box::new(JumpPlusVZeroInstr::create(a)));
+                            }
+                        }
+                    } else {
+                        //Usual JP addr
+                        match parse_nnn_or_symbol(&args[0]) {
+                            AddressOrSymbol::Symbol(s) => {
+                                instrs.push(Box::new(JumpInstr::create_with_symbol(s)));
+                            }
+                            AddressOrSymbol::Address(a) => {
+                                instrs.push(Box::new(JumpInstr::create(a)));
+                            }
+                        }
+                    }
+                }
+                "CALL" => {
+                    match parse_nnn_or_symbol(&args[0]) {
+                        AddressOrSymbol::Symbol(s) => {
+                            instrs.push(Box::new(CallInstr::create_with_symbol(s)));
+                        }
+                        AddressOrSymbol::Address(a) => {
+                            instrs.push(Box::new(CallInstr::create(a)));
+                        }
+                    }
+                }
+                                // Two arguments
+                "OR"    => instrs.push(Box::new(OrRegInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_vx(&args[1]).unwrap()))),
+                "XOR"    => instrs.push(Box::new(XORRegInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_vx(&args[1]).unwrap()))),
+                "AND"    => instrs.push(Box::new(AndRegInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_vx(&args[1]).unwrap()))),
+                "SUB"    => instrs.push(Box::new(SubRegInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_vx(&args[1]).unwrap()))),
+                "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_vx(&args[1]).unwrap()))),
+                "RND"    => instrs.push(Box::new(RandomInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_xx(&args[1]).unwrap()))),
+
+                "SE"     => {
+                    let vx = parse_vx(&args[0]).unwrap();
+                    // Byte or register versions
+                    if let Ok(a) = parse_vx(&args[1]) {
+                        instrs.push(Box::new(SkipIfRegsEqualInstr::create(vx, a)))
+                    } else if let Ok(a) = parse_xx(&args[1]) {
+                        instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
+                    } else {
+                        return Err((
+                                format!("Invalid argument 2 for SE instruction"),
+                                args[1].pos));
+                    }
+                },
+
+                "SNE"   => {
+                    let vx = parse_vx(&args[0]).unwrap();
+                    // Byte or register versions
+                    if let Ok(a) = parse_vx(&args[1]) {
+                        instrs.push(Box::new(SkipIfRegsNotEqualInstr::create(vx, a)))
+                    } else if let Ok(a) = parse_xx(&args[1]) {
+                        instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
+                    } else {
+                        return Err((
+                                format!("Invalid argument 2 for SNE instruction"),
+                                args[1].pos));
+                    }
+                }
+
+                "ADD"   => {
+                    if let Ok(a) = parse_vx(&args[0]) {
+                        // Vx, byte
+                        if let Ok(b) = parse_vx(&args[1]) {
+                            instrs.push(Box::new(AddRegInstr::create(a, b)));
+                        // Vx, Vy
+                        } else if let Ok(b) = parse_xx(&args[1]) {
+                            instrs.push(Box::new(AddByteInstr::create(a, b)));
+                        } else {
+                            return Err((
+                                    format!("Invalid arguments for ADD instruction"),
+                                    args[1].pos));
+                        }
+                    // I, Vx
+                    } else if args[0].str_cmp("I") {
+                        instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
+                    } else {
+                        return Err((
+                                format!("Invalid args for ADD instruction"),
+                                args[1].pos));
+                    }
+                }
+
+                "LD"    => {
+                    if let Ok(a) = parse_vx(&args[0]) {
+                        if let Ok(b) = parse_xx(&args[1]) {
+                            // LD V, byte
+                            instrs.push(Box::new(LoadByteInstr::create(a, b)));
+                        } else if let Ok(b) = parse_vx(&args[1]) {
+                            // LD V, V
+                            instrs.push(Box::new(MovRegInstr::create(a, b)));
+                        } else if args[1].str_cmp("DT") {
+                            // LD V, DT
+                            instrs.push(Box::new(GetDelayTimerInstr::create(a)));
+                        } else if args[1].str_cmp("K") {
+                            // LD V, K
+                            instrs.push(Box::new(WaitForKeyInstr::create(a)));
+                        } else if args[1].str_cmp("[I]") {
+                            // LD V, [I]
+                            instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
+                        } else {
+                            return Err((
+                                    format!("Invalid args to LD instruction"),
+                                    args[1].pos));
+                        }
+                    } else if args[0].str_cmp("I") {
+                        // Special 16 bit address sequence
+                        if let Ok(addr) = parse_extended_addr(&args[1]) {
+                            // TODO: this check should go elsewhere, checking number
+                            // of digits isn't a great way to go
+                            if addr <= 0xFFF {
+                                instrs.push(Box::new(LoadIInstr::create(addr)));
+                            } else {
+                                // We're going to change I anyway so we can trash it
+                                let rest_of_addr = addr - 0xFFF;
+                                instrs.push(Box::new(LoadIInstr::create(0xFFF)));
+
+                                // Number of ADD I, Vx we have to do with 0xFF
+                                // Can't think of another way other than reserving a register here
+                                let regnum: u8 = 14;
+                                let max_regval: u16 = 0xFF;
+                                let num_adds = (rest_of_addr / max_regval) as u8;
+                                // Remainder value for the last ADD
+                                let remainder = (rest_of_addr % max_regval) as u8;
+
+                                if num_adds != 0 {
+                                    instrs.push(Box::new(LoadByteInstr::create(regnum, max_regval as u8)));
+                                    for _ in 0..num_adds {
+                                        instrs.push(Box::new(AddIVInstr::create(regnum)));
+                                    }
+                                }
+
+                                if remainder != 0 {
+                                    instrs.push(Box::new(LoadByteInstr::create(regnum, remainder)));
+                                    instrs.push(Box::new(AddIVInstr::create(regnum)));
+                                }
+
+                                /* TADA! You just loaded a 16 bit address into I
+                                   but gave up a register temporarily to do it.
+
+                                   The reason you can't save/restore is as follows:
+                                   - Set I to some location (font memory/high addr?)
+                                   - Save V0 to memory
+                                   - Do stuff with it to get I to the high address
+                                   - Then set I back to the saved V0 location
+                                   ....
+
+                                   Which defeats the point of this whole silly exercise.
+                                   Also restoring the memory you save to is tricky.
+                                */
+                            }
+                        } else {
+                            // LD I, nnn
+                            // Using the *2nd* argument!
+                            match parse_nnn_or_symbol(&args[1]) {
+                                AddressOrSymbol::Symbol(s) => {
+                                    instrs.push(Box::new(LoadIInstr::create_with_symbol(s)));
+                                }
+                                AddressOrSymbol::Address(a) => {
+                                    instrs.push(Box::new(LoadIInstr::create(a)));
+                                }
+                            }
+                        }
+                    } else if args[0].str_cmp("DT") {
+                        // LD DT, V
+                        instrs.push(Box::new(SetDelayTimerInstr::create(parse_vx(&args[1]).unwrap())));
+                    } else if args[0].str_cmp("ST") {
+                        // LD ST, V
+                        instrs.push(Box::new(SetSoundTimerInstr::create(parse_vx(&args[1]).unwrap())));
+                    } else if args[0].str_cmp("F") {
+                        // LD F, V
+                        instrs.push(Box::new(GetDigitAddrInstr::create(parse_vx(&args[1]).unwrap())));
+                    } else if args[0].str_cmp("B") {
+                        // LD B, V
+                        instrs.push(Box::new(StoreBCDInstr::create(parse_vx(&args[1]).unwrap())));
+                    } else if args[0].str_cmp("[I]") {
+                        // LD [I], V
+                        instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
+                    } else {
+                        return Err((
+                                format!("Invalid args to LD instruction"),
+                                args[0].pos));
+                    }
+                }
+
+                // Only draw has 3
+                "DRW"   => instrs.push(Box::new(DrawSpriteInstr::create(
+                            parse_vx(&args[0]).unwrap(),
+                            parse_vx(&args[1]).unwrap(),
+                            parse_n(&args[2]).unwrap()))),
+                //TODO: this will print it normalised, not as you typed it
+                _ => return Err((
+                        format!("Unrecognised mnemonic: {}", mnemonic.s),
+                        mnemonic.pos)),
             }
         }
+        ArgsType::VX => {
+            let x = match parse_vx(&args[0]) {
+                Err((msg, pos)) => return Err((msg, pos)),
+                Ok(v) => v,
+            };
 
-        // Only draw has 3
-        "DRW"   => instrs.push(Box::new(DrawSpriteInstr::create(
-                    parse_vx(&args[0]).unwrap(),
-                    parse_vx(&args[1]).unwrap(),
-                    parse_n(&args[2]).unwrap()))),
-        //TODO: this will print it normalised, not as you typed it
-        _ => return Err((
-                format!("Unrecognised mnemonic: {}", mnemonic.s),
-                mnemonic.pos)),
+            match mnemonic.s.as_str() {
+                "SHR"   => instrs.push(Box::new(ShrRegInstr::create(x))),
+                "SHL"   => instrs.push(Box::new(ShlRegInstr::create(x))),
+                "SKP"   => instrs.push(Box::new(SkipKeyIfPressedInstr::create(x))),
+                "SKNP"  => instrs.push(Box::new(SkipKeyIfNotPressedInstr::create(x))),
+                _ => panic!("Unknown mnemonic {} with VX args", mnemonic.s),
+            }
+        }
     }
 
     Ok(instrs)
+}
+
+enum ArgsType {
+    Custom,
+    VX,
+}
+
+fn get_args_type(mnemonic: &AsmArg) -> ArgsType {
+    match mnemonic.s.as_str() {
+        "SHR" | "SHL" | "SKP" | "SKNP" => ArgsType::VX,
+        _ => ArgsType::Custom,
+    }
 }
 
 fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize)> {
@@ -434,7 +459,7 @@ fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize
 fn parse_vx(arg: &AsmArg) -> Result<u8, (String, usize)> {
     let c1 = arg.s.chars().nth(0).unwrap();
     if (c1 != 'V') && (c1 != 'v') {
-        return Err(("Does not begin with \"V\"".to_string(), arg.pos)); 
+        return Err(("VX arg does not begin with \"V\"".to_string(), arg.pos)); 
     }
 
     let num = &arg.s[1..];

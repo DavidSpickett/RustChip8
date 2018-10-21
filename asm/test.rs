@@ -7,7 +7,7 @@ mod test {
         assert_eq!(u8::from(1), parse_vx(&AsmArg::new(String::from("V1"), 0)).unwrap());
         match parse_vx(&AsmArg::new(String::from("B1"), 0)) {
             Ok(_) => panic!(),
-            Err((msg, _)) => assert_eq!("Does not begin with \"V\"", msg),
+            Err((msg, _)) => assert_eq!("VX arg does not begin with \"V\"", msg),
         }
     }
 
@@ -341,16 +341,37 @@ mod test {
     #[test]
     fn asm_err_messages() {
         let tests: Vec<(&str, &str)> = vec![
-            ("FOOD", 
+// I know this indentation is weird, but I'm sick of typing slash n
+("FOOD", 
 "\
 0: FOOD
    ^
 Can't get number of args for mnemonic: FOOD"),
-            ("CLS V0",
+("CLS V0",
 "\
 0: CLS V0
    ^
 Expected 0 args for CLS, got 1"),
+("SHR z0",
+"\
+0: SHR z0
+       ^
+VX arg does not begin with \"V\""),
+("SHL V21",
+"\
+0: SHL V21
+       ^
+V register index cannot be > 0xF"),
+("SKP Vfood",
+"\
+0: SKP Vfood
+       ^
+Invalid V register: \"Vfood\""),
+("SKNP V1F",
+"\
+0: SKNP V1F
+        ^
+V register index cannot be > 0xF"),
         ];
         for (input, expected_err) in tests {
             match parse_asm(&String::from(input)) {
