@@ -7,7 +7,7 @@ mod test {
         assert_eq!(u8::from(1), parse_vx(&AsmArg::new(String::from("V1"), 0)).unwrap());
         match parse_vx(&AsmArg::new(String::from("B1"), 0)) {
             Ok(_) => panic!(),
-            Err(msg) => assert_eq!("Does not begin with \"V\"", msg),
+            Err((msg, _)) => assert_eq!("Does not begin with \"V\"", msg),
         }
     }
 

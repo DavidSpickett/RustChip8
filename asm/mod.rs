@@ -10,7 +10,7 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
 
     for (line_no, line) in asm.lines().enumerate() {
         match parse_line(&line, &mut symbols, addr) {
-            Err(msg) => errs.push((line_no, msg, line.to_string())),
+            Err((msg, pos)) => errs.push((line_no, msg, line.to_string())),
             Ok(mut i) => {
                 addr += 2*(i.len() as u16);
                 instrs.append(&mut i);
@@ -94,7 +94,7 @@ fn split_asm_line(line: &str) -> Vec<AsmArg> {
 pub fn parse_line(line: &str,
                   symbols: &mut HashMap<String, u16>, 
                   current_addr: u16)
-                    -> Result<Vec<Box<Instr>>, String> {
+                    -> Result<Vec<Box<Instr>>, (String, usize)> {
     // This function will add new symbols to the map and return an
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
@@ -132,12 +132,14 @@ pub fn parse_line(line: &str,
     if mnemonic.s == "JP" {
         // JP can have one or two args
         if (args.len() == 0) || (args.len() > 2) {
-            return Err(format!("Expected 1 or 2 args for JP instruction, got {}", args.len()));
+            return Err((
+                format!("Expected 1 or 2 args for JP instruction, got {}", args.len()),
+                mnemonic.pos));
         }
     } else {
         match check_num_args(&mnemonic, args.len()) {
             Ok(_) => {},
-            Err(msg) => return Err(msg),
+            Err((msg, pos)) => return Err((msg, pos)),
         }
     }
 
@@ -162,7 +164,9 @@ pub fn parse_line(line: &str,
             if args.len() == 2 {
                 // Use the parser here to allow different formatting
                 if parse_vx(&args[0]).unwrap() != 0 {
-                    return Err(format!("Jump plus instruction can only use V0!"));
+                    return Err((
+                            format!("Jump plus instruction can only use V0!"),
+                            args[0].pos));
                 }
 
                 // JP V0, addr so use the 2nd arg
@@ -229,7 +233,9 @@ pub fn parse_line(line: &str,
             } else if let Ok(a) = parse_xx(&args[1]) {
                 instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
             } else {
-                return Err(format!("Invalid argument 2 for SE instruction"));
+                return Err((
+                        format!("Invalid argument 2 for SE instruction"),
+                        args[1].pos));
             }
         },
 
@@ -241,7 +247,9 @@ pub fn parse_line(line: &str,
             } else if let Ok(a) = parse_xx(&args[1]) {
                 instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
             } else {
-                return Err(format!("Invalid argument 2 for SNE instruction"));
+                return Err((
+                        format!("Invalid argument 2 for SNE instruction"),
+                        args[1].pos));
             }
         }
 
@@ -254,13 +262,17 @@ pub fn parse_line(line: &str,
                 } else if let Ok(b) = parse_xx(&args[1]) {
                     instrs.push(Box::new(AddByteInstr::create(a, b)));
                 } else {
-                    return Err(format!("Invalid arguments for ADD instruction"));
+                    return Err((
+                            format!("Invalid arguments for ADD instruction"),
+                            args[1].pos));
                 }
             // I, Vx
             } else if args[0].str_cmp("I") {
                 instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
-                return Err(format!("Invalid args to ADD instruction"));
+                return Err((
+                        format!("Invalid args for ADD I instruction"),
+                        args[1].pos));
             }
         }
 
@@ -282,7 +294,9 @@ pub fn parse_line(line: &str,
                     // LD V, [I]
                     instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
                 } else {
-                    return Err(format!("Invalid args to LD instruction"));
+                    return Err((
+                            format!("Invalid args to LD instruction"),
+                            args[1].pos));
                 }
             } else if args[0].str_cmp("I") {
                 // Special 16 bit address sequence
@@ -358,7 +372,9 @@ pub fn parse_line(line: &str,
                 // LD [I], V
                 instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
-                return Err(format!("Invalid args to LD instruction"));
+                return Err((
+                        format!("Invalid args to LD instruction"),
+                        args[0].pos));
             }
         }
 
@@ -368,13 +384,15 @@ pub fn parse_line(line: &str,
                     parse_vx(&args[1]).unwrap(),
                     parse_n(&args[2]).unwrap()))),
         //TODO: this will print it normalised, not as you typed it
-        _ => return Err(format!("Unrecognised mnemonic: {}", mnemonic.s)),
+        _ => return Err((
+                format!("Unrecognised mnemonic: {}", mnemonic.s),
+                mnemonic.pos)),
     }
 
     Ok(instrs)
 }
 
-fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, String> {
+fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize)> {
     let expected: usize = match &mnemonic.s[..] {
         "CLS" | "RET" => 0,
         "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".WORD" => 1,
@@ -382,18 +400,22 @@ fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, String> {
         // purposes they all have two
         "LD" | "ADD" | "SE" | "SNE" | "OR" | "AND" | "XOR" | "SUB" | "SUBN" | "RND" => 2,
         "DRW" => 3,
-        _ => return Err(format!("Can't get number of args for mnemonic: {}", mnemonic.s)),
+        _ => return Err((
+                format!("Can't get number of args for mnemonic: {}", mnemonic.s),
+                mnemonic.pos)),
     };
     if expected != num {
-        return Err(format!("Expected {} args for {}, got {}", expected, mnemonic.s, num));
+        return Err((
+                format!("Expected {} args for {}, got {}", expected, mnemonic.s, num),
+                mnemonic.pos));
     }
     Ok(num)
 }
 
-fn parse_vx(arg: &AsmArg) -> Result<u8, String> {
+fn parse_vx(arg: &AsmArg) -> Result<u8, (String, usize)> {
     let c1 = arg.s.chars().nth(0).unwrap();
     if (c1 != 'V') && (c1 != 'v') {
-        return Err("Does not begin with \"V\"".to_string()); 
+        return Err(("Does not begin with \"V\"".to_string(), arg.pos)); 
     }
 
     let num = &arg.s[1..];
@@ -402,7 +424,7 @@ fn parse_vx(arg: &AsmArg) -> Result<u8, String> {
     match num.parse::<u8>() {
         Err(_) => {
             match u8::from_str_radix(&arg.s[1..], 16) {
-                Err(_) => return Err(format!("Invalid V register: \"{}\"", arg.s)),
+                Err(_) => return Err((format!("Invalid V register: \"{}\"", arg.s), arg.pos)),
                 Ok(v) => idx = v,
             }
         }
@@ -410,53 +432,53 @@ fn parse_vx(arg: &AsmArg) -> Result<u8, String> {
     }
 
     if idx > 0xF {
-        return Err("V register index cannot be > 0xF".to_string());
+        return Err(("V register index cannot be > 0xF".to_string(), arg.pos));
     }
 
     Ok(idx)
 }
 
-fn parse_hex(arg: &AsmArg) -> Result<u16, &str> {
+fn parse_hex(arg: &AsmArg) -> Result<u16, (&str, usize)> {
     if arg.len() < 2 {
-        return Err("Arg too short to be a hex number");
+        return Err(("Arg too short to be a hex number", arg.pos));
     }
     if &arg.s[..2] != "0x" {
-        return Err("Hex number must start with \"0x\"");
+        return Err(("Hex number must start with \"0x\"", arg.pos));
     }
     match u16::from_str_radix(&arg.s[2..], 16) {
         //TODO: we're masking range errors here
-        Err(_) => Err("Invalid hex number"),
+        Err(_) => Err(("Invalid hex number", arg.pos)),
         Ok(v) => Ok(v), 
     }
 }
 
-fn parse_xx(arg: &AsmArg) -> Result<u8, &str> {
+fn parse_xx(arg: &AsmArg) -> Result<u8, (&str, usize)> {
     match parse_hex(arg) {
-        Err(msg) => Err(msg),
+        Err((msg, _)) => Err((msg, arg.pos)),
         Ok(v) => {
             if v > 0xff {
-                return Err("Byte argument larger than 0xFF");
+                return Err(("Byte argument larger than 0xFF", arg.pos));
             }
             Ok(v as u8)
         }
     }
 }
 
-fn parse_nnn(arg: &AsmArg) -> Result<u16, &str> {
+fn parse_nnn(arg: &AsmArg) -> Result<u16, (&str, usize)> {
     match parse_hex(arg) {
-        Err(msg) => Err(msg),
+        Err((msg, _)) => Err((msg, arg.pos)),
         Ok(v) => {
             if v > 0xfff {
-                return Err("Address argument larger than 0xFFF");
+                return Err(("Address argument larger than 0xFFF", arg.pos));
             }
             Ok(v)
         }
     }
 }
 
-fn parse_extended_addr(arg: &AsmArg) -> Result<u16, &str> {
+fn parse_extended_addr(arg: &AsmArg) -> Result<u16, (&str, usize)> {
     match parse_hex(arg) {
-        Err(msg) => Err(msg),
+        Err((msg, _)) => Err((msg, arg.pos)),
         Ok(v) => Ok(v),
     }
 }
@@ -469,12 +491,12 @@ fn parse_nnn_or_symbol(arg: &AsmArg) -> AddressOrSymbol {
     }
 }
 
-fn parse_n(arg: &AsmArg) -> Result<u8, String> {
+fn parse_n(arg: &AsmArg) -> Result<u8, (String, usize)> {
     match arg.s.parse::<u8>() {
-        Err(msg) => Err(msg.to_string()),
+        Err(msg) => Err((msg.to_string(), arg.pos)),
         Ok(v) => {
             if v > 15 {
-                return Err("Nibble must be < 16".to_string());
+                return Err(("Nibble must be < 16".to_string(), arg.pos));
             } else {
                 return Ok(v);
             }
