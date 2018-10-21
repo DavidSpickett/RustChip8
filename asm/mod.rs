@@ -36,8 +36,9 @@ pub fn parse_asm(asm: &String) -> Result<Vec<Box<Instr>>, String> {
     if !errs.is_empty() {
         let mut err_msg = format!("Assembly failed with {} errors.\n", errs.len());
         for err in errs {
-            let pointer = String::from(" ").repeat(err.char_no);
-            err_msg += &format!("\n{}: {}\n{}^\n{}", err.line_no, err.line, pointer, err.msg);
+            let line_no_fmt = format!("{}:", err.line_no);
+            let pointer = String::from(" ").repeat(line_no_fmt.len() + err.char_no + 1);
+            err_msg += &format!("\n{} {}\n{}^\n{}", line_no_fmt, err.line, pointer, err.msg);
         }
         // In future we might want to keep these seperate
         return Err(err_msg);
@@ -289,7 +290,7 @@ pub fn parse_line(line: &str,
                 instrs.push(Box::new(AddIVInstr::create(parse_vx(&args[1]).unwrap())));
             } else {
                 return Err((
-                        format!("Invalid args for ADD I instruction"),
+                        format!("Invalid args for ADD instruction"),
                         args[1].pos));
             }
         }

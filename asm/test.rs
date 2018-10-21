@@ -337,4 +337,30 @@ mod test {
         let expected: Vec<u16> = vec![0x220A, 0x1234, 0x8014, 0x0000, 0x2111, 0x8234];
         assert_asm_bitpatterns(&asm, &expected);
     }
+
+    #[test]
+    fn asm_err_messages() {
+        let tests: Vec<(&str, &str)> = vec![
+            ("FOOD", 
+"\
+0: FOOD
+   ^
+Can't get number of args for mnemonic: FOOD"),
+            ("CLS V0",
+"\
+0: CLS V0
+   ^
+Expected 0 args for CLS, got 1"),
+        ];
+        for (input, expected_err) in tests {
+            match parse_asm(&String::from(input)) {
+                Err(msg) => {
+                    // Split off the summary line, 1.. to remove the \n
+                    let rest = &(msg.splitn(2, "\n").collect::<Vec<&str>>()[1])[1..];
+                    assert_eq!(expected_err, rest);
+                }
+                Ok(_) => panic!("Expected an error here!"),
+            }
+        }
+    }
 }
