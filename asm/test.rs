@@ -77,7 +77,7 @@ mod test {
             ".word 0x1234",
         ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
         let asm_str = expected.iter().fold(String::from(""), |acc, n| acc + "\n" + n);
-        let got = parse_asm(&asm_str);
+        let got = parse_asm(&asm_str).unwrap();
         for (e, g) in expected.iter().zip(got.iter()) {
             assert_eq!(*e, g.repr());
         }
@@ -87,7 +87,7 @@ mod test {
         for (input, expected) in tests.iter() {
             println!("{}", input);
             let in_str = input.to_string();
-            assert_eq!(*expected, parse_asm(&in_str)[0].repr());
+            assert_eq!(*expected, parse_asm(&in_str).unwrap()[0].repr());
         }
     }
 
@@ -164,7 +164,7 @@ mod test {
     }
 
     fn assert_asm_bitpatterns(asm: &String, expected: &[u16]) {
-        for (instr, exp) in parse_asm(&asm).iter().zip(expected.iter()) {
+        for (instr, exp) in parse_asm(&asm).unwrap().iter().zip(expected.iter()) {
             assert_eq!(*exp, instr.get_opcode());
         }
     }
@@ -236,7 +236,7 @@ mod test {
             CALL next
             JP aardvark".to_string();
 
-        parse_asm(&asm);
+        let _ = parse_asm(&asm).unwrap();
     }
 
     #[test]

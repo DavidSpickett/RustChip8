@@ -2,15 +2,30 @@ use system::instr::*;
 use std::collections::HashMap;
 mod test;
 
-pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
+struct AsmError {
+    line_no: usize,
+    line: String,
+    msg: String,
+    char_no: usize,
+}
+
+impl AsmError {
+    fn new(line_no: usize, line: String, msg: String, char_no: usize) -> AsmError {
+        AsmError { line_no, line, msg, char_no}
+    }
+}
+
+pub fn parse_asm(asm: &String) -> Result<Vec<Box<Instr>>, String> {
     let mut instrs: Vec<Box<Instr>> = vec![];
     let mut symbols: HashMap<String, u16> = HashMap::new();
     let mut addr: u16 = 0x0200;
-    let mut errs: Vec<(usize, String, String)> = vec![];
+    let mut errs: Vec<AsmError> = vec![];
 
     for (line_no, line) in asm.lines().enumerate() {
         match parse_line(&line, &mut symbols, addr) {
-            Err((msg, pos)) => errs.push((line_no, msg, line.to_string())),
+            Err((msg, pos)) => errs.push(AsmError::new(
+                    line_no, line.to_string(),
+                    msg, pos)),
             Ok(mut i) => {
                 addr += 2*(i.len() as u16);
                 instrs.append(&mut i);
@@ -20,10 +35,12 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
 
     if !errs.is_empty() {
         let mut err_msg = format!("Assembly failed with {} errors.\n", errs.len());
-        for (line_no, msg, line) in errs {
-            err_msg += &format!("\n{}: {}\n{}", line_no, line, msg);
+        for err in errs {
+            let pointer = String::from(" ").repeat(err.char_no);
+            err_msg += &format!("\n{}: {}\n{}^\n{}", err.line_no, err.line, pointer, err.msg);
         }
-        panic!(err_msg);
+        // In future we might want to keep these seperate
+        return Err(err_msg);
     }
 
     // Patch up symbol addresses
@@ -31,12 +48,13 @@ pub fn parse_asm(asm: &String) -> Vec<Box<Instr>> {
         if let Some(sym) = ins.get_symbol() {
             match symbols.get(&sym) {
                 Some(addr) => ins.resolve_symbol(*addr),
+                // TODO: add these to the result somehow
                 None => panic!("Could not resolve symbol \"{}\"", sym),
             }
         }
     }
 
-    instrs
+    Ok(instrs)
 }
 
 
