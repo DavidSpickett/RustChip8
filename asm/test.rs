@@ -134,6 +134,15 @@ mod test {
         assert_asm_roundtrip(&asm_tests);
     }
 
+    #[test]
+    fn nibble_formatting_accepted() {
+        let asm_tests = [
+            ("DRW V0, V1, 0001", "DRW V0, V1, 1"),
+            ("DRW V0, V1, 012",  "DRW V0, V1, 12"),
+        ];
+        assert_asm_roundtrip(&asm_tests);
+    }
+
     fn assert_asm_bitpatterns(asm: &String, expected: &[u16]) {
         for (instr, exp) in parse_asm(&asm).iter().zip(expected.iter()) {
             assert_eq!(*exp, instr.get_opcode());
