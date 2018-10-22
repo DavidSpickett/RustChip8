@@ -7,7 +7,7 @@ mod test {
         assert_eq!(u8::from(1), parse_vx(&AsmArg::new(String::from("V1"), 0)).unwrap());
         match parse_vx(&AsmArg::new(String::from("B1"), 0)) {
             Ok(_) => panic!(),
-            Err((msg, _)) => assert_eq!("VX arg does not begin with \"V\"", msg),
+            Err((msg, _, _)) => assert_eq!("VX arg does not begin with \"V\"", msg),
         }
     }
 
@@ -84,7 +84,7 @@ mod test {
             ".word 0x1234",
         ].iter().map(|x| x.to_string()).collect::<Vec<String>>();
         let asm_str = expected.iter().fold(String::from(""), |acc, n| acc + "\n" + n);
-        let got = parse_asm(&asm_str).unwrap();
+        let got = parse_asm_str(&asm_str).unwrap();
         for (e, g) in expected.iter().zip(got.iter()) {
             assert_eq!(*e, g.repr());
         }
@@ -94,7 +94,7 @@ mod test {
         for (input, expected) in tests.iter() {
             println!("{}", input);
             let in_str = input.to_string();
-            assert_eq!(*expected, parse_asm(&in_str).unwrap()[0].repr());
+            assert_eq!(*expected, parse_asm_str(&in_str).unwrap()[0].repr());
         }
     }
 
@@ -171,7 +171,7 @@ mod test {
     }
 
     fn assert_asm_bitpatterns(asm: &String, expected: &[u16]) {
-        for (instr, exp) in parse_asm(&asm).unwrap().iter().zip(expected.iter()) {
+        for (instr, exp) in parse_asm_str(&asm).unwrap().iter().zip(expected.iter()) {
             assert_eq!(*exp, instr.get_opcode());
         }
     }
@@ -243,7 +243,7 @@ mod test {
             CALL next
             JP aardvark".to_string();
 
-        let _ = parse_asm(&asm).unwrap();
+        let _ = parse_asm_str(&asm).unwrap();
     }
 
     #[test]
@@ -351,92 +351,100 @@ mod test {
 // I know this indentation is weird, but I'm sick of typing slash n
 ("FOOD", 
 "\
-0: FOOD
-   ^
-Can't get number of args for mnemonic: FOOD"),
+<str>:0:0: error: Can't get number of args for mnemonic: FOOD
+FOOD
+^~~~"),
 ("CLS V0",
 "\
-0: CLS V0
-   ^
-Expected 0 args for CLS, got 1"),
+<str>:0:0: error: Expected 0 args for CLS, got 1
+CLS V0
+^~~"),
 ("SHR z0",
 "\
-0: SHR z0
-       ^
-VX arg does not begin with \"V\""),
+<str>:0:4: error: VX arg does not begin with \"V\"
+SHR z0
+    ^~"),
 ("SHL V21",
 "\
-0: SHL V21
-       ^
-V register index cannot be > 0xF"),
+<str>:0:4: error: V register index cannot be > 0xF
+SHL V21
+    ^~~"),
 ("SKP Vfood",
 "\
-0: SKP Vfood
-       ^
-Invalid V register: \"Vfood\""),
+<str>:0:4: error: Invalid V register: \"Vfood\"
+SKP Vfood
+    ^~~~~"),
 ("SKP food",
 "\
-0: SKP food
-       ^
-VX arg does not begin with \"V\""),
+<str>:0:4: error: VX arg does not begin with \"V\"
+SKP food
+    ^~~~"),
 ("SKP f",
 "\
-0: SKP f
-       ^
-VX arg does not begin with \"V\""),
+<str>:0:4: error: VX arg does not begin with \"V\"
+SKP f
+    ^"),
 ("SKNP V1F",
 "\
-0: SKNP V1F
-        ^
-V register index cannot be > 0xF"),
+<str>:0:5: error: V register index cannot be > 0xF
+SKNP V1F
+     ^~~"),
 ("SUB f0, V2",
 "\
-0: SUB f0, V2
-       ^
-VX arg does not begin with \"V\""),
+<str>:0:4: error: VX arg does not begin with \"V\"
+SUB f0, V2
+    ^~"),
 ("SUBN V0, Z0",
 "\
-0: SUBN V0, Z0
-            ^
-VX arg does not begin with \"V\""),
+<str>:0:9: error: VX arg does not begin with \"V\"
+SUBN V0, Z0
+         ^~"),
 ("XOR V21, V0",
 "\
-0: XOR V21, V0
-       ^
-V register index cannot be > 0xF"),
+<str>:0:4: error: V register index cannot be > 0xF
+XOR V21, V0
+    ^~~"),
 ("XOR V1, V33",
 "\
-0: XOR V1, V33
-           ^
-V register index cannot be > 0xF"),
+<str>:0:8: error: V register index cannot be > 0xF
+XOR V1, V33
+        ^~~"),
 ("AND 0x12, V0",
 "\
-0: AND 0x12, V0
-       ^
-VX arg does not begin with \"V\""),
+<str>:0:4: error: VX arg does not begin with \"V\"
+AND 0x12, V0
+    ^~~~"),
 ("AND V0, 32",
 "\
-0: AND V0, 32
-           ^
-VX arg does not begin with \"V\""),
+<str>:0:8: error: VX arg does not begin with \"V\"
+AND V0, 32
+        ^~"),
 // Had an issue with single char args
 ("OR V0, 3",
 "\
-0: OR V0, 3
-          ^
-VX arg does not begin with \"V\""),
+<str>:0:7: error: VX arg does not begin with \"V\"
+OR V0, 3
+       ^"),
 ("OR 1, vf",
 "\
-0: OR 1, vf
-      ^
-VX arg does not begin with \"V\""),
+<str>:0:3: error: VX arg does not begin with \"V\"
+OR 1, vf
+   ^"),
+("ADD I, nonsense",
+"\
+<str>:0:7: error: VX arg does not begin with \"V\"
+ADD I, nonsense
+       ^~~~~~~~"),
+("ADD stuff, things",
+"\
+<str>:0:4: error: Invalid args for ADD instruction
+ADD stuff, things
+    ^~~~~~~~~~~~~"),
         ];
         for (input, expected_err) in tests {
-            match parse_asm(&String::from(input)) {
+            match parse_asm_str(&String::from(input)) {
                 Err(msg) => {
-                    // Split off the summary line, 1.. to remove the \n
-                    let rest = &(msg.splitn(2, "\n").collect::<Vec<&str>>()[1])[1..];
-                    assert_eq!(expected_err, rest);
+                    assert_eq!(expected_err, msg);
                 }
                 Ok(_) => panic!("Expected an error here!"),
             }

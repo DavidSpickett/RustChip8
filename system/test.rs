@@ -2,7 +2,7 @@
 mod test {
     use system::*;
     use std::path::PathBuf;
-    use asm::parse_asm;
+    use asm::parse_asm_str;
     use std::collections::HashSet;
     extern crate rand;
     use system::test::test::rand::{Rng, thread_rng};
@@ -423,7 +423,7 @@ mod test {
         self:\n\
         JP self".to_string();
 
-        let instrs = parse_asm(&asm).unwrap();
+        let instrs = parse_asm_str(&asm).unwrap();
         let rom = instr_to_data(&instrs);
 
         let target: u16 = 0x214;
@@ -583,7 +583,7 @@ mod test {
         end:
             JP end".to_string();
 
-        let instrs = parse_asm(&asm).unwrap();
+        let instrs = parse_asm_str(&asm).unwrap();
         let rom = instr_to_data(&instrs);
         let mut c8 = make_system(&rom);
         let mut old_pc: u16 = 0xffff;
