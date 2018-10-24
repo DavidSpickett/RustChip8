@@ -312,16 +312,6 @@ mod test {
         c8.execute(&ins);
     }
 
-    fn instr_to_data(instrs: &[Box<Instr>]) -> Vec<u8> {
-        let mut rom: Vec<u8> = vec![];
-        for i in instrs {
-            let opc = i.get_opcode();
-            rom.push((opc >> 8) as u8);
-            rom.push(opc as u8);
-        }
-        rom
-    }
-
     static PROG_EXPECTED: &'static str = "\
         ----------------------------------------------------------------\n\
         ----------------------------------------------------------------\n\
@@ -390,7 +380,7 @@ mod test {
         let target: u16 = (0x200 + (instrs.len() as u16))*2;
         instrs.push(Box::new(JumpInstr::create(target)));
 
-        let rom = instr_to_data(&instrs);
+        let rom = instrs_to_rom(&instrs);
         let mut c8 = make_system(&rom);
 
         while c8.pc != target {
@@ -424,7 +414,7 @@ mod test {
         JP self".to_string();
 
         let instrs = parse_asm_str(&asm).unwrap();
-        let rom = instr_to_data(&instrs);
+        let rom = instrs_to_rom(&instrs);
 
         let target: u16 = 0x214;
         let mut c8 = make_system(&rom);
@@ -530,16 +520,16 @@ mod test {
             @-@-@-@-@@@@@@@@@@@@@@@@-@-@-@-@\n\
             @-@-@-@-@--------------@-@-@-@-@\n\
             @-@-@-@-@-@@@@@@@@@@@@-@-@-@-@-@\n\
-            @-@-@-@-@-@---------@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@@@@@@@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@-----@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@-@@@-@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@-@-@-@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@-@-@-@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@-@@@-@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@-----@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@-@@@@@@@-@--@-@-@-@-@\n\
-            @-@-@-@-@-@---------@--@-@-@-@-@\n\
+            @-@-@-@-@-@----------@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@@@@@@@@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@------@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@@@@-@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@--@-@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@--@-@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@-@@@@-@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@------@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@-@@@@@@@@-@-@-@-@-@-@\n\
+            @-@-@-@-@-@----------@-@-@-@-@-@\n\
             @-@-@-@-@-@@@@@@@@@@@@-@-@-@-@-@\n\
             @-@-@-@-@--------------@-@-@-@-@\n\
             @-@-@-@-@@@@@@@@@@@@@@@@-@-@-@-@\n\
@@ -584,7 +574,7 @@ mod test {
             JP end".to_string();
 
         let instrs = parse_asm_str(&asm).unwrap();
-        let rom = instr_to_data(&instrs);
+        let rom = instrs_to_rom(&instrs);
         let mut c8 = make_system(&rom);
         let mut old_pc: u16 = 0xffff;
 

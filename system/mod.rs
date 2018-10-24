@@ -23,6 +23,16 @@ pub fn read_rom(filename: &str) -> Vec<u8> {
     contents
 }
 
+pub fn instrs_to_rom(instrs: &[Box<Instr>]) -> Vec<u8> {
+    let mut rom: Vec<u8> = vec![];
+    for i in instrs {
+        let opc = i.get_opcode();
+        rom.push((opc >> 8) as u8);
+        rom.push(opc as u8);
+    }
+    rom
+}
+
 pub fn make_system(rom: &[u8]) -> Chip8System {
     let mut c = Chip8System::new();
     c.init_memory(&rom);

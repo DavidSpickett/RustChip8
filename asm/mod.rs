@@ -41,7 +41,10 @@ pub fn parse_asm(asm: &String, filename: &String) -> Result<Vec<Box<Instr>>, Str
 
     if !errs.is_empty() {
         let mut err_msg = String::from("");
-        for err in errs {
+        for (i, err) in errs.iter().enumerate() {
+            if i != 0 {
+                err_msg.push('\n');
+            }
             err_msg += &format!("{}:{}:{}: error: {}", filename, err.line_no, err.char_no, err.msg);
             let pointer = String::from(" ").repeat(err.char_no);
             let len = match err.len {

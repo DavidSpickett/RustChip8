@@ -1,2 +1,3 @@
 all:
-	rustc main.rs && ./main
+	cargo run -- -a example.s example.o
+	cargo run -- -i example.o 20
