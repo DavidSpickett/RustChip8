@@ -39,6 +39,21 @@ pub fn parse_asm(asm: &String, filename: &String) -> Result<Vec<Box<Instr>>, Str
         }
     }
 
+    // Patch up symbol addresses
+    for ins in instrs.iter_mut() {
+        if let Some(sym) = ins.get_symbol() {
+            match symbols.get(&sym) {
+                Some(addr) => ins.resolve_symbol(*addr),
+                None => {
+                    errs.push(AsmError::new(
+                        //TODO: line info for these
+                        0, "".to_string(), format!("Could not resolve symbol \"{}\"", sym),
+                        0, 1));
+                },
+            }
+        }
+    }
+
     if !errs.is_empty() {
         let mut err_msg = String::from("");
         for (i, err) in errs.iter().enumerate() {
@@ -59,17 +74,6 @@ pub fn parse_asm(asm: &String, filename: &String) -> Result<Vec<Box<Instr>>, Str
         }
         // In future we might want to keep these seperate
         return Err(err_msg);
-    }
-
-    // Patch up symbol addresses
-    for ins in instrs.iter_mut() {
-        if let Some(sym) = ins.get_symbol() {
-            match symbols.get(&sym) {
-                Some(addr) => ins.resolve_symbol(*addr),
-                // TODO: add these to the result somehow
-                None => panic!("Could not resolve symbol \"{}\"", sym),
-            }
-        }
     }
 
     Ok(instrs)

@@ -235,15 +235,21 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected="Could not resolve symbol \"aardvark\"")]
-    fn unresolved_symbol_panics() {
+    fn unresolved_symbol_err() {
         let asm = "
             JP next
         next:
             CALL next
             JP aardvark".to_string();
-
-        let _ = parse_asm_str(&asm).unwrap();
+        
+        match parse_asm_str(&asm) {
+            Err(msg) => assert_eq!(
+                "<str>:0:0: error: Could not resolve symbol \"aardvark\"\n\
+                \n\
+                ^",
+                msg),
+            Ok(_) => panic!("Should have failed!"),
+        };
     }
 
     #[test]
