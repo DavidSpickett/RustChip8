@@ -79,12 +79,17 @@ pub fn parse_asm(asm: &String, filename: &String) -> Result<Vec<Box<Instr>>, Str
 #[derive(PartialEq, Debug)]
 struct AsmArg {
     s: String,
+    upper: String,
     pos: usize,
 }
 
 impl AsmArg {
     fn new(s: String, pos: usize) -> AsmArg {
-        AsmArg{s, pos}
+        AsmArg{
+            upper: s.to_uppercase(),
+            s: s,
+            pos : pos,
+        }
     }
 
     fn str_cmp(&self, other: &str) -> bool {
@@ -148,7 +153,7 @@ pub fn parse_line(line: &str,
         return Ok(instrs);
     }
 
-    let mut mnemonic = args.remove(0);
+    let mnemonic = args.remove(0);
 
     // Check for labels
     if args.is_empty() {
@@ -159,10 +164,7 @@ pub fn parse_line(line: &str,
         }
     }
 
-    // Now we know it's not a label we can normalise the case
-    mnemonic.s = mnemonic.s.to_uppercase();
-
-    if mnemonic.s == "JP" {
+    if mnemonic.upper == "JP" {
         // JP can have one or two args
         if (args.len() == 0) || (args.len() > 2) {
             return Err((
@@ -178,7 +180,7 @@ pub fn parse_line(line: &str,
 
     match get_args_type(&mnemonic) {
         ArgsType::Custom => {
-            match mnemonic.s.as_str() {
+            match mnemonic.upper.as_str() {
                 // No arguments
                 "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
                 "RET"   => instrs.push(Box::new(RetInstr::create())),
@@ -319,8 +321,6 @@ pub fn parse_line(line: &str,
                     } else if args[0].str_cmp("I") {
                         // Special 16 bit address sequence
                         if let Ok(addr) = parse_extended_addr(&args[1]) {
-                            // TODO: this check should go elsewhere, checking number
-                            // of digits isn't a great way to go
                             if addr <= 0xFFF {
                                 instrs.push(Box::new(LoadIInstr::create(addr)));
                             } else {
@@ -401,7 +401,6 @@ pub fn parse_line(line: &str,
                             parse_vx(&args[0]).unwrap(),
                             parse_vx(&args[1]).unwrap(),
                             parse_n(&args[2]).unwrap()))),
-                //TODO: this will print it normalised, not as you typed it
                 _ => return Err((
                         format!("Unrecognised mnemonic: {}", mnemonic.s),
                         mnemonic.pos, mnemonic.len())),
@@ -413,7 +412,7 @@ pub fn parse_line(line: &str,
                 Ok(v) => v,
             };
 
-            match mnemonic.s.as_str() {
+            match mnemonic.upper.as_str() {
                 "SHR"   => instrs.push(Box::new(ShrRegInstr::create(x))),
                 "SHL"   => instrs.push(Box::new(ShlRegInstr::create(x))),
                 "SKP"   => instrs.push(Box::new(SkipKeyIfPressedInstr::create(x))),
@@ -432,7 +431,7 @@ pub fn parse_line(line: &str,
                 Ok(v) => v,
             };
 
-            match mnemonic.s.as_str() {
+            match mnemonic.upper.as_str() {
                 "OR"    => instrs.push(Box::new(OrRegInstr::create(x, y))),
                 "XOR"    => instrs.push(Box::new(XORRegInstr::create(x, y))),
                 "AND"    => instrs.push(Box::new(AndRegInstr::create(x, y))),
@@ -453,7 +452,7 @@ enum ArgsType {
 }
 
 fn get_args_type(mnemonic: &AsmArg) -> ArgsType {
-    match mnemonic.s.as_str() {
+    match mnemonic.upper.as_str() {
         "SHR" | "SHL" | "SKP" | "SKNP" => ArgsType::VX,
         "OR" | "XOR" | "AND" | "SUB" | "SUBN" => ArgsType::VXVY,
         _ => ArgsType::Custom,
@@ -461,7 +460,7 @@ fn get_args_type(mnemonic: &AsmArg) -> ArgsType {
 }
 
 fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize, usize)> {
-    let expected: usize = match &mnemonic.s[..] {
+    let expected: usize = match &mnemonic.upper[..] {
         "CLS" | "RET" => 0,
         "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".WORD" => 1,
         // Some variants of LD only have 1 variable arg, but for asm
@@ -469,7 +468,7 @@ fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize
         "LD" | "ADD" | "SE" | "SNE" | "OR" | "AND" | "XOR" | "SUB" | "SUBN" | "RND" => 2,
         "DRW" => 3,
         _ => return Err((
-                format!("Can't get number of args for mnemonic: {}", mnemonic.s),
+                format!("Unrecognised mnemonic: {}", mnemonic.s),
                 mnemonic.pos, mnemonic.len())),
     };
     if expected != num {

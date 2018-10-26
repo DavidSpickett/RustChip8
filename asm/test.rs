@@ -346,12 +346,25 @@ mod test {
     }
 
     #[test]
+    fn mnemonic_formatting_retained_err() {
+        let asm = "CaTfOoD V0, V1".to_string();
+        match parse_asm_str(&asm) {
+            Err(msg) => assert_eq!(
+                                   "<str>:0:0: error: Unrecognised mnemonic: CaTfOoD\n\
+                                   CaTfOoD V0, V1\n\
+                                   ^~~~~~~",
+                                   msg),
+            Ok(_) => panic!("Should have failed!"),
+        };
+    }
+
+    #[test]
     fn asm_err_messages() {
         let tests: Vec<(&str, &str)> = vec![
 // I know this indentation is weird, but I'm sick of typing slash n
 ("FOOD", 
 "\
-<str>:0:0: error: Can't get number of args for mnemonic: FOOD
+<str>:0:0: error: Unrecognised mnemonic: FOOD
 FOOD
 ^~~~"),
 ("CLS V0",
