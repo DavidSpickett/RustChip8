@@ -506,45 +506,45 @@ fn parse_vx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
     Ok(idx)
 }
 
-fn parse_hex(arg: &AsmArg) -> Result<u16, (&str, usize, usize)> {
+fn parse_hex(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
     if arg.len() < 2 {
-        return Err(("Arg too short to be a hex number", arg.pos, arg.len()));
+        return Err(("Arg too short to be a hex number".to_string(), arg.pos, arg.len()));
     }
     if &arg.s[..2] != "0x" {
-        return Err(("Hex number must start with \"0x\"", arg.pos, arg.len()));
+        return Err(("Hex number must start with \"0x\"".to_string(), arg.pos, arg.len()));
     }
     match u16::from_str_radix(&arg.s[2..], 16) {
-        //TODO: we're masking range errors here
-        Err(_) => Err(("Invalid hex number", arg.pos, arg.len())),
+        Err(e) => Err((format!("Invalid hex number: {}", e.to_string()), arg.pos, arg.len())),
         Ok(v) => Ok(v), 
     }
 }
 
-fn parse_xx(arg: &AsmArg) -> Result<u8, (&str, usize, usize)> {
+fn parse_xx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
     match parse_hex(arg) {
         Err((msg, pos, len)) => Err((msg, pos, len)),
         Ok(v) => {
             if v > 0xff {
-                return Err(("Byte argument larger than 0xFF", arg.pos, arg.len()));
+                return Err(("Byte argument larger than 0xFF".to_string(),
+                            arg.pos, arg.len()));
             }
             Ok(v as u8)
         }
     }
 }
 
-fn parse_nnn(arg: &AsmArg) -> Result<u16, (&str, usize, usize)> {
+fn parse_nnn(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
     match parse_hex(arg) {
         Err((msg, pos, len)) => Err((msg, pos, len)),
         Ok(v) => {
             if v > 0xfff {
-                return Err(("Address argument larger than 0xFFF", arg.pos, arg.len()));
+                return Err(("Address argument larger than 0xFFF".to_string(), arg.pos, arg.len()));
             }
             Ok(v)
         }
     }
 }
 
-fn parse_extended_addr(arg: &AsmArg) -> Result<u16, (&str, usize, usize)> {
+fn parse_extended_addr(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
     match parse_hex(arg) {
         Err((msg, pos, len)) => Err((msg, pos, len)),
         Ok(v) => Ok(v),
