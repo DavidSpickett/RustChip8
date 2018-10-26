@@ -7,14 +7,16 @@ use sdl::sdl2::keyboard::Scancode;
 use sdl::sdl2::rect::Rect;
 use sdl::sdl2::render::WindowCanvas;
 use sdl::sdl2::EventPump;
+use system::{SCREEN_WIDTH, SCREEN_HEIGHT};
+
 
 pub fn sdl_init(pixel_size: i32) -> (WindowCanvas, EventPump) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
     let window = video_subsystem.window("RChip8",
-                                        64*(pixel_size as u32),
-                                        32*(pixel_size as u32))
+                                        (SCREEN_WIDTH as u32)*(pixel_size as u32),
+                                        (SCREEN_HEIGHT as u32)*(pixel_size as u32))
         .position_centered()
         .opengl()
         .build()
@@ -77,7 +79,7 @@ pub fn process_events(event_pump: &mut EventPump) -> bool{
     false
 }
 
-pub fn draw_screen(pixel_size: i32, canvas: &mut WindowCanvas, screen: &[bool; 64*32]) {
+pub fn draw_screen(pixel_size: i32, canvas: &mut WindowCanvas, screen: &[bool]) {
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
 
@@ -100,8 +102,8 @@ pub fn draw_screen(pixel_size: i32, canvas: &mut WindowCanvas, screen: &[bool; 6
     canvas.set_draw_color(Color::RGB(0, 255, 0));
     for (idx, pixel) in screen.iter().enumerate() {
         if *pixel {
-            let x = ((idx as i32) % 64) * pixel_size;
-            let y = ((idx as i32) / 64) * pixel_size;
+            let x = ((idx as i32) % (SCREEN_WIDTH as i32)) * pixel_size;
+            let y = ((idx as i32) / (SCREEN_WIDTH as i32)) * pixel_size;
 
             if let Err(why) = canvas.fill_rect(
                 Rect::new(x, y, pixel_size as u32,
@@ -115,11 +117,11 @@ pub fn draw_screen(pixel_size: i32, canvas: &mut WindowCanvas, screen: &[bool; 6
 }
 
 #[allow(dead_code)]
-fn screen_to_pixels(screen: [bool; 64*32]) -> Vec<Vec<u8>> {
+fn screen_to_pixels(screen: [bool; SCREEN_WIDTH*SCREEN_HEIGHT]) -> Vec<Vec<u8>> {
     let mut ret: Vec<Vec<u8>> = vec![];
     let mut row: Vec<u8> = vec![];
     for (idx, pixel) in screen.iter().enumerate() {
-        if (idx != 0) && ((idx % 64) == 0) {
+        if (idx != 0) && ((idx % SCREEN_WIDTH) == 0) {
             ret.push(row.clone());
             row.clear();
         }

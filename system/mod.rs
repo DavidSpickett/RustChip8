@@ -48,10 +48,13 @@ pub enum InstrFlags {
     Sound,
 }
 
+pub const SCREEN_WIDTH: usize = 64;
+pub const SCREEN_HEIGHT: usize = 32;
+
 pub struct Chip8System {
     pc : u16,
     memory : [u8 ; 0xFFFF],
-    pub screen : [bool ; 64*32],
+    pub screen : [bool ; SCREEN_WIDTH*SCREEN_HEIGHT],
     pub keys : [bool ; 16],
     pub pressed_key : usize,
     v_regs : [u8 ; 16],
@@ -66,7 +69,7 @@ impl Chip8System {
         Chip8System {
             pc: 0x200,
             memory: [0; 0xFFFF],
-            screen: [false; 64*32],
+            screen: [false; SCREEN_WIDTH*SCREEN_HEIGHT],
             keys: [false; 16],
             stack: vec![],
             pressed_key: 0,
@@ -99,8 +102,8 @@ impl Chip8System {
     pub fn screen_to_str(&self) -> String {
         let mut ret = String::from("");
         let mut row = String::from("");
-        for (i, pixel) in self.screen.iter().enumerate() { //TODO: remove magic numbers
-            if ((i % 64) == 0) &&  i != 0 { // TODO: make the screen a 2d array?
+        for (i, pixel) in self.screen.iter().enumerate() {
+            if ((i % SCREEN_WIDTH) == 0) &&  i != 0 {
                 row.push('\n');
                 ret.push_str(&row);
                 row.clear();
