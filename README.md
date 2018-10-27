@@ -1,4 +1,4 @@
-RChip8 is a Rust interpreter and assembler for the Chip-8 virtual machine.
+RustChip8 is a Rust interpreter and assembler for the Chip-8 virtual machine.
 Essentially a rewrite of my previous project PyChip8.
 
 Examples
@@ -12,7 +12,7 @@ Examples
 Input
 -----
 
-|Chip8 keys  |RChip8 keys|
+|Chip8 keys  |RustChip8 keys|
 |------------|------------|
 |1	2	3	C|1 2 3 4     |
 |4	5	6	D|q w e r     |
