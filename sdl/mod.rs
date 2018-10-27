@@ -14,7 +14,7 @@ pub fn sdl_init(pixel_size: i32) -> (WindowCanvas, EventPump) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
-    let window = video_subsystem.window("RChip8",
+    let window = video_subsystem.window("RustChip8",
                                         (SCREEN_WIDTH as u32)*(pixel_size as u32),
                                         (SCREEN_HEIGHT as u32)*(pixel_size as u32))
         .position_centered()

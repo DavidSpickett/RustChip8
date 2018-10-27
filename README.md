@@ -1,6 +1,8 @@
 RustChip8 is a Rust interpreter and assembler for the Chip-8 virtual machine.
 Essentially a rewrite of my previous project PyChip8.
 
+![INVADERS](/screenshots/invaders.png) <img height="10" hspace="10"/> ![BLINKY](/screenshots/blinky.png)
+
 Examples
 --------
 ```
