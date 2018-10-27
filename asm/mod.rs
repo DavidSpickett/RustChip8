@@ -17,11 +17,11 @@ impl AsmError {
     }
 }
 
-pub fn parse_asm_str(asm: &String) -> Result<Vec<Box<Instr>>, String> {
+pub fn parse_asm_str(asm: &str) -> Result<Vec<Box<Instr>>, String> {
     parse_asm(asm, &"<str>".to_string())
 }
 
-pub fn parse_asm(asm: &String, filename: &String) -> Result<Vec<Box<Instr>>, String> {
+pub fn parse_asm(asm: &str, filename: &str) -> Result<Vec<Box<Instr>>, String> {
     let mut instrs: Vec<Box<Instr>> = vec![];
     let mut symbols: HashMap<String, u16> = HashMap::new();
     let mut addr: u16 = 0x0200;
@@ -40,7 +40,7 @@ pub fn parse_asm(asm: &String, filename: &String) -> Result<Vec<Box<Instr>>, Str
     }
 
     // Patch up symbol addresses
-    for ins in instrs.iter_mut() {
+    for ins in &mut instrs {
         if let Some(sym) = ins.get_symbol() {
             match symbols.get(&sym) {
                 Some(addr) => ins.resolve_symbol(*addr),
@@ -91,8 +91,8 @@ impl AsmArg {
     fn new(s: String, pos: usize) -> AsmArg {
         AsmArg{
             upper: s.to_uppercase(),
-            s: s,
-            pos : pos,
+            s,
+            pos,
         }
     }
 
@@ -122,11 +122,9 @@ fn split_asm_line(line: &str) -> Vec<AsmArg> {
             part.push(c);
         }
 
-        if is_terminator || is_last {
-            if !part.is_empty() {
-                parts.push(AsmArg::new(part.to_owned(), start));
-                part.clear();
-            }
+        if (is_terminator || is_last) && !part.is_empty() {
+            parts.push(AsmArg::new(part.to_owned(), start));
+            part.clear();
         }
     }
 
@@ -160,17 +158,15 @@ pub fn parse_line(line: &str,
     let mnemonic = args.remove(0);
 
     // Check for labels
-    if args.is_empty() {
-        if mnemonic.s.ends_with(":") {
-            // Add a symbol for this address
-            symbols.insert(mnemonic.s[..mnemonic.len()-1].to_string(), current_addr);
-            return Ok(instrs);
-        }
+    if args.is_empty() && mnemonic.s.ends_with(':') {
+        // Add a symbol for this address
+        symbols.insert(mnemonic.s[..mnemonic.len()-1].to_string(), current_addr);
+        return Ok(instrs);
     }
 
     if mnemonic.upper == "JP" {
         // JP can have one or two args
-        if (args.len() == 0) || (args.len() > 2) {
+        if args.is_empty() || (args.len() > 2) {
             return Err((
                 format!("Expected 1 or 2 args for JP instruction, got {}", args.len()),
                 mnemonic.pos, 0));
@@ -206,7 +202,7 @@ pub fn parse_line(line: &str,
                         // Use the parser here to allow different formatting
                         if parse_vx(&args[0]).unwrap() != 0 {
                             return Err((
-                                    format!("Jump plus instruction can only use V0!"),
+                                    "Jump plus instruction can only use V0!".to_string(),
                                     args[0].pos, args[0].len()));
                         }
 
@@ -255,7 +251,7 @@ pub fn parse_line(line: &str,
                         instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
                     } else {
                         return Err((
-                                format!("Invalid argument 2 for SE instruction"),
+                                "Invalid argument 2 for SE instruction".to_string(),
                                 args[1].pos, args[1].len()));
                     }
                 },
@@ -269,7 +265,7 @@ pub fn parse_line(line: &str,
                         instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
                     } else {
                         return Err((
-                                format!("Invalid argument 2 for SNE instruction"),
+                                "Invalid argument 2 for SNE instruction".to_string(),
                                 args[1].pos, args[1].len()));
                     }
                 }
@@ -284,7 +280,7 @@ pub fn parse_line(line: &str,
                             instrs.push(Box::new(AddByteInstr::create(a, b)));
                         } else {
                             return Err((
-                                    format!("Invalid arguments for ADD instruction"),
+                                    "Invalid arguments for ADD instruction".to_string(),
                                     args[1].pos, 0));
                         }
                     // I, Vx
@@ -295,7 +291,7 @@ pub fn parse_line(line: &str,
                         };
                     } else {
                         return Err((
-                                format!("Invalid args for ADD instruction"),
+                                "Invalid args for ADD instruction".to_string(),
                                 args[0].pos, 0));
                     }
                 }
@@ -319,7 +315,7 @@ pub fn parse_line(line: &str,
                             instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
                         } else {
                             return Err((
-                                    format!("Invalid args to LD instruction"),
+                                    "Invalid args to LD instruction".to_string(),
                                     args[0].pos, 0));
                         }
                     } else if args[0].str_cmp("I") {
@@ -395,7 +391,7 @@ pub fn parse_line(line: &str,
                         instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
                     } else {
                         return Err((
-                                format!("Invalid args to LD instruction"),
+                                "Invalid args to LD instruction".to_string(),
                                 args[0].pos, 0));
                     }
                 }
@@ -568,9 +564,9 @@ fn parse_n(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
         Err(msg) => Err((msg.to_string(), arg.pos, arg.len())),
         Ok(v) => {
             if v > 15 {
-                return Err(("Nibble must be < 16".to_string(), arg.pos, arg.len()));
+                Err(("Nibble must be < 16".to_string(), arg.pos, arg.len()))
             } else {
-                return Ok(v);
+                Ok(v)
             }
         }
     }

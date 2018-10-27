@@ -102,7 +102,7 @@ pub fn main() {
     }
 }
 
-fn assemble_file(asm_path: &String, output_file: &String) {
+fn assemble_file(asm_path: &str, output_file: &str) {
     let file = match File::open(asm_path) {
         Err(why) => panic!("Couldn't open assembly file: {}",why.description()),
         Ok(file) => file,
@@ -110,9 +110,8 @@ fn assemble_file(asm_path: &String, output_file: &String) {
 
     let mut buf_reader = BufReader::new(file);
     let mut contents = String::new();
-    match buf_reader.read_to_string(&mut contents) {
-        Err(msg) => panic!("Couldn't read assembly file: {}", msg),
-        Ok(_) => {},
+    if let Err(msg) = buf_reader.read_to_string(&mut contents) {
+        panic!("Couldn't read assembly file: {}", msg);
     };
 
     let instrs = match parse_asm(&contents, asm_path) {
@@ -137,7 +136,7 @@ fn assemble_file(asm_path: &String, output_file: &String) {
     }
 }
 
-fn interpret_file(scaling_factor: i32, rom_path: &String) {
+fn interpret_file(scaling_factor: i32, rom_path: &str) {
     let (mut canvas, mut event_pump) = sdl_init(scaling_factor);
     let mut c8 = make_system(&read_rom(rom_path));
 

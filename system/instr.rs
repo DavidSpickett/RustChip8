@@ -67,7 +67,7 @@ fn op_to_vy(opcode: u16) -> u8 {
 
 pub trait Instr {
     fn repr(&self) -> String {
-        let mut ret = format!("{}", self.get_mnemonic());
+        let mut ret = self.get_mnemonic().to_string();
         let args = self.get_formatted_args();
         if !args.is_empty() {
             ret += &format!(" {}", args);

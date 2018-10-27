@@ -15,9 +15,8 @@ pub fn read_rom(filename: &str) -> Vec<u8> {
     };
 
     let mut contents = Vec::new();
-    match file.read_to_end(&mut contents) {
-        Err(_) => panic!("Error reading ROM file."),
-        Ok(_) => {}
+    if let Err(msg) = file.read_to_end(&mut contents) {
+        panic!("Error reading ROM file: {}", msg);
     }
 
     contents
