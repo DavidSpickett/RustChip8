@@ -29,9 +29,9 @@ pub fn parse_asm(asm: &str, filename: &str) -> Result<Vec<Box<Instr>>, String> {
 
     for (line_no, line) in asm.lines().enumerate() {
         match parse_line(&line, &mut symbols, addr) {
-            Err((msg, pos, len)) => errs.push(AsmError::new(
+            Err(err) => errs.push(AsmError::new(
                     line_no, line.to_string(),
-                    msg, pos, len)),
+                    err.msg, err.pos, err.len)),
             Ok(mut i) => {
                 addr += 2*(i.len() as u16);
                 instrs.append(&mut i);
@@ -131,10 +131,22 @@ fn split_asm_line(line: &str) -> Vec<AsmArg> {
     parts
 }
 
-pub fn parse_line(line: &str,
+struct ErrInfo {
+    msg: String,
+    pos: usize,
+    len: usize,
+}
+
+impl ErrInfo {
+    fn new(msg: String, pos: usize, len: usize) -> ErrInfo {
+        ErrInfo { msg, pos, len }
+    }
+}
+
+fn parse_line(line: &str,
                   symbols: &mut HashMap<String, u16>, 
                   current_addr: u16)
-                    -> Result<Vec<Box<Instr>>, (String, usize, usize)> {
+                    -> Result<Vec<Box<Instr>>, ErrInfo> {
     // This function will add new symbols to the map and return an
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
@@ -167,14 +179,14 @@ pub fn parse_line(line: &str,
     if mnemonic.upper == "JP" {
         // JP can have one or two args
         if args.is_empty() || (args.len() > 2) {
-            return Err((
+            return Err(ErrInfo::new( 
                 format!("Expected 1 or 2 args for JP instruction, got {}", args.len()),
                 mnemonic.pos, 0));
         }
     } else {
         match check_num_args(&mnemonic, args.len()) {
             Ok(_) => {},
-            Err((msg, pos, len)) => return Err((msg, pos, len)),
+            Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
         }
     }
 
@@ -201,7 +213,7 @@ pub fn parse_line(line: &str,
                     if args.len() == 2 {
                         // Use the parser here to allow different formatting
                         if parse_vx(&args[0]).unwrap() != 0 {
-                            return Err((
+                            return Err(ErrInfo::new(
                                     "Jump plus instruction can only use V0!".to_string(),
                                     args[0].pos, args[0].len()));
                         }
@@ -241,9 +253,9 @@ pub fn parse_line(line: &str,
                 // Two arguments
                 "RND"    => {
                     match parse_vx(&args[0]) {
-                        Err((msg, pos, len)) => return Err((msg, pos, len)),
+                        Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
                         Ok(v) => match parse_xx(&args[1]) {
-                            Err((msg, pos, len)) => return Err((msg, pos, len)),
+                            Err((msg, pos, len)) => return Err(ErrInfo{msg, pos, len}),
                             Ok(b) => instrs.push(Box::new(RandomInstr::create(v, b))),
                         }
                     }
@@ -256,7 +268,7 @@ pub fn parse_line(line: &str,
                     } else if let Ok(a) = parse_xx(&args[1]) {
                         instrs.push(Box::new(SkipEqualInstr::create(vx, a)))
                     } else {
-                        return Err((
+                        return Err(ErrInfo::new(
                                 "Invalid argument 2 for SE instruction".to_string(),
                                 args[1].pos, args[1].len()));
                     }
@@ -270,7 +282,7 @@ pub fn parse_line(line: &str,
                     } else if let Ok(a) = parse_xx(&args[1]) {
                         instrs.push(Box::new(SkipNotEqualInstr::create(vx, a)))
                     } else {
-                        return Err((
+                        return Err(ErrInfo::new(
                                 "Invalid argument 2 for SNE instruction".to_string(),
                                 args[1].pos, args[1].len()));
                     }
@@ -285,18 +297,18 @@ pub fn parse_line(line: &str,
                         } else if let Ok(b) = parse_xx(&args[1]) {
                             instrs.push(Box::new(AddByteInstr::create(a, b)));
                         } else {
-                            return Err((
+                            return Err(ErrInfo::new(
                                     "Invalid arguments for ADD instruction".to_string(),
                                     args[1].pos, 0));
                         }
                     // I, Vx
                     } else if args[0].str_cmp("I") {
                         match parse_vx(&args[1]) {
-                            Err((msg, pos, len)) => return Err((msg, pos, len)),
+                            Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
                             Ok(v) => instrs.push(Box::new(AddIVInstr::create(v))),
                         };
                     } else {
-                        return Err((
+                        return Err(ErrInfo::new(
                                 "Invalid args for ADD instruction".to_string(),
                                 args[0].pos, 0));
                     }
@@ -320,7 +332,7 @@ pub fn parse_line(line: &str,
                             // LD V, [I]
                             instrs.push(Box::new(ReadRegsFromMemInstr::create(a)));
                         } else {
-                            return Err((
+                            return Err(ErrInfo::new(
                                     "Invalid args to LD instruction".to_string(),
                                     args[0].pos, 0));
                         }
@@ -396,7 +408,7 @@ pub fn parse_line(line: &str,
                         // LD [I], V
                         instrs.push(Box::new(WriteRegsToMemInstr::create(parse_vx(&args[1]).unwrap())));
                     } else {
-                        return Err((
+                        return Err(ErrInfo::new(
                                 "Invalid args to LD instruction".to_string(),
                                 args[0].pos, 0));
                     }
@@ -407,14 +419,14 @@ pub fn parse_line(line: &str,
                             parse_vx(&args[0]).unwrap(),
                             parse_vx(&args[1]).unwrap(),
                             parse_n(&args[2]).unwrap()))),
-                _ => return Err((
+                _ => return Err(ErrInfo::new(
                         format!("Unrecognised mnemonic: {}", mnemonic.s),
                         mnemonic.pos, mnemonic.len())),
             }
         }
         ArgsType::VX => {
             let x = match parse_vx(&args[0]) {
-                Err((msg, pos, len)) => return Err((msg, pos, len)),
+                Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
                 Ok(v) => v,
             };
 
@@ -428,12 +440,12 @@ pub fn parse_line(line: &str,
         }
         ArgsType::VXVY => {
             let x = match parse_vx(&args[0]) {
-                Err((msg, pos, len)) => return Err((msg, pos, len)),
+                Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
                 Ok(v) => v,
             };
 
             let y = match parse_vx(&args[1]) {
-                Err((msg, pos, len)) => return Err((msg, pos, len)),
+                Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
                 Ok(v) => v,
             };
 
