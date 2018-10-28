@@ -131,6 +131,7 @@ fn split_asm_line(line: &str) -> Vec<AsmArg> {
     parts
 }
 
+#[derive(Debug)]
 struct ErrInfo {
     msg: String,
     pos: usize,
@@ -186,7 +187,7 @@ fn parse_line(line: &str,
     } else {
         match check_num_args(&mnemonic, args.len()) {
             Ok(_) => {},
-            Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
+            Err(e) => return Err(e),
         }
     }
 
@@ -253,9 +254,9 @@ fn parse_line(line: &str,
                 // Two arguments
                 "RND"    => {
                     match parse_vx(&args[0]) {
-                        Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
+                        Err(e) => return Err(e),
                         Ok(v) => match parse_xx(&args[1]) {
-                            Err((msg, pos, len)) => return Err(ErrInfo{msg, pos, len}),
+                            Err(e) => return Err(e),
                             Ok(b) => instrs.push(Box::new(RandomInstr::create(v, b))),
                         }
                     }
@@ -304,7 +305,7 @@ fn parse_line(line: &str,
                     // I, Vx
                     } else if args[0].str_cmp("I") {
                         match parse_vx(&args[1]) {
-                            Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
+                            Err(e) => return Err(e),
                             Ok(v) => instrs.push(Box::new(AddIVInstr::create(v))),
                         };
                     } else {
@@ -426,7 +427,7 @@ fn parse_line(line: &str,
         }
         ArgsType::VX => {
             let x = match parse_vx(&args[0]) {
-                Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
+                Err(e) => return Err(e),
                 Ok(v) => v,
             };
 
@@ -440,12 +441,12 @@ fn parse_line(line: &str,
         }
         ArgsType::VXVY => {
             let x = match parse_vx(&args[0]) {
-                Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
+                Err(e) => return Err(e),
                 Ok(v) => v,
             };
 
             let y = match parse_vx(&args[1]) {
-                Err((msg, pos, len)) => return Err(ErrInfo::new(msg, pos, len)),
+                Err(e) => return Err(e),
                 Ok(v) => v,
             };
 
@@ -477,7 +478,7 @@ fn get_args_type(mnemonic: &AsmArg) -> ArgsType {
     }
 }
 
-fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize, usize)> {
+fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, ErrInfo> {
     let expected: usize = match &mnemonic.upper[..] {
         "CLS" | "RET" => 0,
         "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".WORD" => 1,
@@ -485,22 +486,24 @@ fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, (String, usize
         // purposes they all have two
         "LD" | "ADD" | "SE" | "SNE" | "OR" | "AND" | "XOR" | "SUB" | "SUBN" | "RND" => 2,
         "DRW" => 3,
-        _ => return Err((
+        _ => return Err(ErrInfo::new(
                 format!("Unrecognised mnemonic: {}", mnemonic.s),
                 mnemonic.pos, mnemonic.len())),
     };
     if expected != num {
-        return Err((
+        return Err(ErrInfo::new(
                 format!("Expected {} args for {}, got {}", expected, mnemonic.s, num),
                 mnemonic.pos, mnemonic.len()));
     }
     Ok(num)
 }
 
-fn parse_vx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
+fn parse_vx(arg: &AsmArg) -> Result<u8, ErrInfo> {
     let c1 = arg.s.chars().nth(0).unwrap();
     if (c1 != 'V') && (c1 != 'v') {
-        return Err(("VX arg does not begin with \"V\"".to_string(), arg.pos, arg.len())); 
+        return Err(ErrInfo::new(
+                "VX arg does not begin with \"V\"".to_string(),
+                arg.pos, arg.len()));
     }
 
     let num = &arg.s[1..];
@@ -509,8 +512,9 @@ fn parse_vx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
     match num.parse::<u8>() {
         Err(_) => {
             match u8::from_str_radix(&arg.s[1..], 16) {
-                Err(_) => return Err((format!("Invalid V register: \"{}\"", arg.s),
-                arg.pos, arg.len())),
+                Err(_) => return Err(
+                    ErrInfo::new(format!("Invalid V register: \"{}\"", arg.s),
+                    arg.pos, arg.len())),
                 Ok(v) => idx = v,
             }
         }
@@ -518,29 +522,33 @@ fn parse_vx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
     }
 
     if idx > 0xF {
-        return Err(("V register index cannot be > 0xF".to_string(), arg.pos, arg.len()));
+        return Err(ErrInfo::new(
+                "V register index cannot be > 0xF".to_string(),
+                arg.pos, arg.len()));
     }
 
     Ok(idx)
 }
 
-fn parse_hex(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
+fn parse_hex(arg: &AsmArg) -> Result<u16, ErrInfo> {
     if arg.len() < 2 {
-        return Err(("Arg too short to be a hex number".to_string(), arg.pos, arg.len()));
+        return Err(ErrInfo::new("Arg too short to be a hex number".to_string(), arg.pos, arg.len()));
     }
     if &arg.s[..2] != "0x" {
-        return Err(("Hex number must start with \"0x\"".to_string(), arg.pos, arg.len()));
+        return Err(ErrInfo::new("Hex number must start with \"0x\"".to_string(), arg.pos, arg.len()));
     }
     match u16::from_str_radix(&arg.s[2..], 16) {
-        Err(e) => Err((format!("Invalid hex number: {}", e.to_string()), arg.pos, arg.len())),
+        Err(e) => Err(ErrInfo::new(format!("Invalid hex number: {}", e.to_string()), arg.pos, arg.len())),
         Ok(v) => Ok(v), 
     }
 }
 
-fn parse_xx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
+fn parse_xx(arg: &AsmArg) -> Result<u8, ErrInfo> {
     let v = match parse_hex(arg) {
         Err(_) => match arg.s.parse::<u16>() {
-                Err(_) => return Err(("Inalid byte argument".to_string(), arg.pos, arg.len())),
+                Err(_) => return Err(ErrInfo::new(
+                        "Inalid byte argument".to_string(),
+                        arg.pos, arg.len())),
                 Ok(v) => v,
         },
         Ok(v) => v,
@@ -548,27 +556,29 @@ fn parse_xx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
 
     // TODO: some out of range error, as opposed to not recognised
     if v > 0xff {
-        return Err(("Byte argument larger than 0xFF".to_string(),
+        return Err(ErrInfo::new("Byte argument larger than 0xFF".to_string(),
                     arg.pos, arg.len()));
     }
     Ok(v as u8)
 }
 
-fn parse_nnn(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
+fn parse_nnn(arg: &AsmArg) -> Result<u16, ErrInfo> {
     match parse_hex(arg) {
-        Err((msg, pos, len)) => Err((msg, pos, len)),
+        Err(e) => Err(e),
         Ok(v) => {
             if v > 0xfff {
-                return Err(("Address argument larger than 0xFFF".to_string(), arg.pos, arg.len()));
+                return Err(ErrInfo::new(
+                        "Address argument larger than 0xFFF".to_string(),
+                        arg.pos, arg.len()));
             }
             Ok(v)
         }
     }
 }
 
-fn parse_extended_addr(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
+fn parse_extended_addr(arg: &AsmArg) -> Result<u16, ErrInfo> {
     match parse_hex(arg) {
-        Err((msg, pos, len)) => Err((msg, pos, len)),
+        Err(e) => Err(e),
         Ok(v) => Ok(v),
     }
 }
@@ -581,12 +591,12 @@ fn parse_nnn_or_symbol(arg: &AsmArg) -> AddressOrSymbol {
     }
 }
 
-fn parse_n(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
+fn parse_n(arg: &AsmArg) -> Result<u8, ErrInfo> {
     match arg.s.parse::<u8>() {
-        Err(msg) => Err((msg.to_string(), arg.pos, arg.len())),
+        Err(msg) => Err(ErrInfo::new(msg.to_string(), arg.pos, arg.len())),
         Ok(v) => {
             if v > 15 {
-                Err(("Nibble must be < 16".to_string(), arg.pos, arg.len()))
+                Err(ErrInfo::new("Nibble must be < 16".to_string(), arg.pos, arg.len()))
             } else {
                 Ok(v)
             }
