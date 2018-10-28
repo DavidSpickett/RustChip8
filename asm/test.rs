@@ -162,6 +162,16 @@ mod test {
     }
 
     #[test]
+    fn allow_decimal_bytes() {
+        let asm_tests = [
+            ("ADD V0, 123", "ADD V0, 0x7B"),
+            ("LD VF, 0032", "LD V15, 0x20"),
+            ("RND V1, 255", "RND V1, 0xFF"),
+        ];
+        assert_asm_roundtrip(&asm_tests);
+    }
+
+    #[test]
     fn nibble_formatting_accepted() {
         let asm_tests = [
             ("DRW V0, V1, 0001", "DRW V0, V1, 1"),
@@ -459,6 +469,11 @@ ADD I, nonsense
 <str>:0:4: error: Invalid args for ADD instruction
 ADD stuff, things
     ^~~~~~~~~~~~~"),
+("RND V0, 256",
+"\
+<str>:0:8: error: Byte argument larger than 0xFF
+RND V0, 256
+        ^~~"),
         ];
         for (input, expected_err) in tests {
             match parse_asm_str(&String::from(input)) {

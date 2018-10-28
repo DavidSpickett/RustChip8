@@ -239,9 +239,15 @@ pub fn parse_line(line: &str,
                 }
 
                 // Two arguments
-                "RND"    => instrs.push(Box::new(RandomInstr::create(
-                                parse_vx(&args[0]).unwrap(),
-                                parse_xx(&args[1]).unwrap()))),
+                "RND"    => {
+                    match parse_vx(&args[0]) {
+                        Err((msg, pos, len)) => return Err((msg, pos, len)),
+                        Ok(v) => match parse_xx(&args[1]) {
+                            Err((msg, pos, len)) => return Err((msg, pos, len)),
+                            Ok(b) => instrs.push(Box::new(RandomInstr::create(v, b))),
+                        }
+                    }
+                }
                 "SE"     => {
                     let vx = parse_vx(&args[0]).unwrap();
                     // Byte or register versions
@@ -520,16 +526,20 @@ fn parse_hex(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
 }
 
 fn parse_xx(arg: &AsmArg) -> Result<u8, (String, usize, usize)> {
-    match parse_hex(arg) {
-        Err((msg, pos, len)) => Err((msg, pos, len)),
-        Ok(v) => {
-            if v > 0xff {
-                return Err(("Byte argument larger than 0xFF".to_string(),
-                            arg.pos, arg.len()));
-            }
-            Ok(v as u8)
-        }
+    let v = match parse_hex(arg) {
+        Err(_) => match arg.s.parse::<u16>() {
+                Err(_) => return Err(("Inalid byte argument".to_string(), arg.pos, arg.len())),
+                Ok(v) => v,
+        },
+        Ok(v) => v,
+    };
+
+    // TODO: some out of range error, as opposed to not recognised
+    if v > 0xff {
+        return Err(("Byte argument larger than 0xFF".to_string(),
+                    arg.pos, arg.len()));
     }
+    Ok(v as u8)
 }
 
 fn parse_nnn(arg: &AsmArg) -> Result<u16, (String, usize, usize)> {
