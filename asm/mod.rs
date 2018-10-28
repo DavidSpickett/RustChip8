@@ -1,5 +1,5 @@
 use system::instr::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 mod test;
 
 struct AsmError {
@@ -18,10 +18,16 @@ impl AsmError {
 }
 
 pub fn parse_asm_str(asm: &str) -> Result<Vec<Box<Instr>>, String> {
-    parse_asm(asm, &"<str>".to_string())
+    let mut warnings: Vec<String> = vec![];
+    parse_asm(asm, &"<str>".to_string(), &mut warnings)
 }
 
-pub fn parse_asm(asm: &str, filename: &str) -> Result<Vec<Box<Instr>>, String> {
+fn parse_asm_str_with_warnings(asm: &str, warnings: &mut Vec<String>)
+    -> Result<Vec<Box<Instr>>, String> {
+    parse_asm(asm, &"<str>".to_string(), warnings)
+}
+
+pub fn parse_asm(asm: &str, filename: &str, warnings: &mut Vec<String>) -> Result<Vec<Box<Instr>>, String> {
     let mut instrs: Vec<Box<Instr>> = vec![];
     let mut symbols: HashMap<String, u16> = HashMap::new();
     let mut addr: u16 = 0x0200;
@@ -40,10 +46,14 @@ pub fn parse_asm(asm: &str, filename: &str) -> Result<Vec<Box<Instr>>, String> {
     }
 
     // Patch up symbol addresses
+    let mut resolved_syms = HashSet::new();
     for ins in &mut instrs {
         if let Some(sym) = ins.get_symbol() {
             match symbols.get(&sym) {
-                Some(addr) => ins.resolve_symbol(*addr),
+                Some(addr) => {
+                    ins.resolve_symbol(*addr);
+                    resolved_syms.insert(sym);
+                }
                 None => {
                     errs.push(AsmError::new(
                         //TODO: line info for these
@@ -51,6 +61,13 @@ pub fn parse_asm(asm: &str, filename: &str) -> Result<Vec<Box<Instr>>, String> {
                         0, 1));
                 },
             }
+        }
+    }
+
+    // Check for unused labels
+    for (sym, _) in symbols {
+        if !resolved_syms.contains(&sym) {
+            warnings.push(format!("{}: warning: Unused label \"{}\"", filename, sym));
         }
     }
 
@@ -145,9 +162,9 @@ impl ErrInfo {
 }
 
 fn parse_line(line: &str,
-                  symbols: &mut HashMap<String, u16>, 
-                  current_addr: u16)
-                    -> Result<Vec<Box<Instr>>, ErrInfo> {
+              symbols: &mut HashMap<String, u16>,
+              current_addr: u16)
+                -> Result<Vec<Box<Instr>>, ErrInfo> {
     // This function will add new symbols to the map and return an
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
@@ -173,7 +190,13 @@ fn parse_line(line: &str,
     // Check for labels
     if args.is_empty() && mnemonic.s.ends_with(':') {
         // Add a symbol for this address
-        symbols.insert(mnemonic.s[..mnemonic.len()-1].to_string(), current_addr);
+        let sym_name = mnemonic.s[..mnemonic.len()-1].to_string();
+        match symbols.get(&sym_name) {
+            None => symbols.insert(sym_name, current_addr),
+            Some(_) => return Err(ErrInfo::new(
+                    "Label repeated".to_string(),
+                    mnemonic.pos, mnemonic.len())),
+        };
         return Ok(instrs);
     }
 

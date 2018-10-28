@@ -114,15 +114,20 @@ fn assemble_file(asm_path: &str, output_file: &str) {
         panic!("Couldn't read assembly file: {}", msg);
     };
 
-    let instrs = match parse_asm(&contents, asm_path) {
+    let mut warnings: Vec<String> = vec![];
+    let res = parse_asm(&contents, asm_path, &mut warnings);
+    for w in warnings {
+        println!("{}", w);
+    }
+    let instrs = match res {
         Err(msgs) => {
             println!("{}", msgs);
             process::exit(1);
         },
         Ok(i) => i,
     };
-    let binary = instrs_to_rom(&instrs);
 
+    let binary = instrs_to_rom(&instrs);
     let mut file = OpenOptions::new()
                     .write(true)
                     .truncate(true)

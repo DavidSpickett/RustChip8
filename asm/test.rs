@@ -375,6 +375,20 @@ mod test {
     }
 
     #[test]
+    fn asm_warning_messages() {
+        let tests: Vec<(&str, &str)> = vec![
+            ("loop:", "<str>: warning: Unused label \"loop\""),
+            ("loop:\nJP loop\nloop2:\n,loop3:\nCALL loop3",
+             "<str>: warning: Unused label \"loop2\""),
+        ];
+        for (input, expected) in tests {
+            let mut warnings: Vec<String> = vec![];
+            let _ = parse_asm_str_with_warnings(&String::from(input), &mut warnings).unwrap();
+            assert_eq!(expected, warnings[0]);
+        }
+    }
+
+    #[test]
     fn asm_err_messages() {
         let tests: Vec<(&str, &str)> = vec![
 // I know this indentation is weird, but I'm sick of typing slash n
@@ -474,6 +488,15 @@ ADD stuff, things
 <str>:0:8: error: Byte argument larger than 0xFF
 RND V0, 256
         ^~~"),
+("\
+thing:
+    CLS
+thing:
+    CALL thing",
+"\
+<str>:2:0: error: Label repeated
+thing:
+^~~~~~"),
         ];
         for (input, expected_err) in tests {
             match parse_asm_str(&String::from(input)) {
