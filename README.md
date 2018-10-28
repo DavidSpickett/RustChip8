@@ -52,6 +52,12 @@ Syntax is fairly forgiving, mixed case is accepted for mnemonics and
 register names. V registers can be specified with hex or decimal, although
 the disassembler always uses decimal.
 
+### Examples
+
+* [Simple game](https://github.com/DavidSpickett/RustChip8/tree/master/asm_example)
+* system/test.rs
+* asm/test.rs
+
 ### Comments
 
 Single line C style comments can be used like so.
