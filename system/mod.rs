@@ -195,6 +195,8 @@ impl Chip8System {
     }
 
     fn format_unknown(&self, opcode: u16) -> String {
+        // Not the best place for this but it works
+        self.dump();
         format!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2)
     }
 
@@ -205,6 +207,11 @@ impl Chip8System {
                     // Note that these first two *must* begin with 0, as in 0x00E0
                     0x0E0 => Ok(Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>),
                     0x0EE => Ok(Box::new(RetInstr::new(opcode))          as Box<Instr>),
+                    0xFFF => {
+                        // Special BRK instr
+                        self.dump();
+                        panic!(format!("BRK instruction encountered at PC 0x{:04X}", self.pc-2));
+                    },
                     _ =>    Ok(Box::new(SysInstr::new(opcode))          as Box<Instr>),
                 }
             }

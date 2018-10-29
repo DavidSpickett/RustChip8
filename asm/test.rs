@@ -276,6 +276,13 @@ mod test {
 
         assert_asm_bitpatterns(&asm, &expected);
     }
+
+    #[test]
+    fn brk_instr() {
+        let asm = "BRK".to_string();
+        let expected: Vec<u16> = vec![0x0FFF];
+        assert_asm_bitpatterns(&asm, &expected);
+    }
     
     #[test]
     #[should_panic(expected="Cannot get address for unresolved symbol \"xyz\"")]

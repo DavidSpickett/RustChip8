@@ -130,6 +130,25 @@ sprite_data:
 With this you can embed data for sprites without needing to know
 what address it will end up at.
 
+### Breakpoints
+
+Since SYS instructions are nops for this interpreter, the instruction
+'SYS 0xFFF' is re-used as a breakpoint aka 'BRK'. When the interpreter
+hits one of these it will print the CPU state and then exit.
+
+```
+fn:
+  CLS
+  ADD V0, V1
+  RET
+  //Shouldn't get here
+  BRK
+```
+
+The state is also printed when an unknown instruction is found. So at
+this point 'BRK' is just a nicer way of doing .word with an invalid
+instr encoding.
+
 References
 ----------
 

@@ -68,9 +68,13 @@ mod test {
 
         let alls: [u16; 11] = [0x0, 0x1, 0x2, 0x3, 0x4, 0x6, 0x7, 0xA, 0xB, 0xC, 0xD];
         for n in alls.iter() {
-            let base = n << 12;
+            let base: u16 = n << 12;
             for i in 0..0x1000_u16 {
-                instrs.push(base+i);
+                let ins = base+i;
+                //Skip BRK
+                if ins != 0x0FFF {
+                    instrs.push(base+i);
+                }
             }
         }
 
@@ -133,7 +137,7 @@ mod test {
     }
 
     #[test]
-    fn all_invalid_chip8_should_panic() {
+    fn all_invalid_chip8_should_err() {
         let all_instrs: HashSet<u16> = all_valid_chip8_instrs().into_iter().collect();
         let all_encodings: HashSet<u16> = (0..0xFFFF_u16).collect();
         let invalid_instrs = all_encodings.difference(&all_instrs);
@@ -141,8 +145,12 @@ mod test {
         let dummy: Vec<u8> = vec![];
         let c8 = make_system(&dummy);
         for i in invalid_instrs {
-            let decode = c8.get_opcode_obj(*i);
-            assert!(decode.is_err());
+            // Skip BRK
+            if *i != 0x0FFF {
+                println!("{:04x}", *i);
+                let decode = c8.get_opcode_obj(*i);
+                assert!(decode.is_err());
+            }
         }
     }
 
@@ -221,6 +229,17 @@ mod test {
     fn ret_empty_stack_panics() {
         // RET
         let instrs: Vec<u8> = vec![0x00, 0xEE];
+        let mut c8 = make_system(&instrs);
+
+        let ins = c8.fetch_and_decode();
+        c8.execute(&ins);
+    }
+
+    #[test]
+    #[should_panic(expected="BRK instruction encountered at PC 0x0200")]
+    fn panic_on_brk() {
+        // BRK aka SYS 0xFFF
+        let instrs: Vec<u8> =vec![0x0F, 0xFF];
         let mut c8 = make_system(&instrs);
 
         let ins = c8.fetch_and_decode();

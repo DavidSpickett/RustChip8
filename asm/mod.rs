@@ -220,6 +220,7 @@ fn parse_line(line: &str,
                 // No arguments
                 "CLS"   => instrs.push(Box::new(ClearDisplayInstr::create())),
                 "RET"   => instrs.push(Box::new(RetInstr::create())),
+                "BRK"   => instrs.push(Box::new(SysInstr::create(0xFFF))),
                 // Single argument
                 ".WORD" => instrs.push(Box::new(WordInstr::create(
                             parse_extended_addr(&args[0]).unwrap()))),
@@ -503,7 +504,7 @@ fn get_args_type(mnemonic: &AsmArg) -> ArgsType {
 
 fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, ErrInfo> {
     let expected: usize = match &mnemonic.upper[..] {
-        "CLS" | "RET" => 0,
+        "CLS" | "RET" | "BRK" => 0,
         "SYS" | "CALL" | "SHR" | "SHL" | "SKP" | "SKNP" | ".WORD" => 1,
         // Some variants of LD only have 1 variable arg, but for asm
         // purposes they all have two
