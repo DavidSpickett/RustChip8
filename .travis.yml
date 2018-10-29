@@ -4,3 +4,5 @@ addons:
   apt:
     packages:
     - libsdl2-dev
+env:
+  - RUSTFLAGS='-D warnings'

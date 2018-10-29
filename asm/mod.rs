@@ -17,11 +17,13 @@ impl AsmError {
     }
 }
 
+#[cfg(test)]
 pub fn parse_asm_str(asm: &str) -> Result<Vec<Box<Instr>>, String> {
     let mut warnings: Vec<String> = vec![];
     parse_asm(asm, &"<str>".to_string(), &mut warnings)
 }
 
+#[cfg(test)]
 fn parse_asm_str_with_warnings(asm: &str, warnings: &mut Vec<String>)
     -> Result<Vec<Box<Instr>>, String> {
     parse_asm(asm, &"<str>".to_string(), warnings)
