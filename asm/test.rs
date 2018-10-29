@@ -281,7 +281,7 @@ mod test {
     #[should_panic(expected="Cannot get address for unresolved symbol \"xyz\"")]
     fn get_opcode_on_unresolved_symbol_panics() {
         let ins = JumpInstr::create_with_symbol("xyz".to_string());
-        ins.get_opcode();
+        let _ = ins.get_opcode();
     }
 
     #[test]

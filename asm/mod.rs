@@ -54,7 +54,7 @@ pub fn parse_asm(asm: &str, filename: &str, warnings: &mut Vec<String>) -> Resul
             match symbols.get(&sym) {
                 Some(addr) => {
                     ins.resolve_symbol(*addr);
-                    resolved_syms.insert(sym);
+                    let _ = resolved_syms.insert(sym);
                 }
                 None => {
                     errs.push(AsmError::new(
@@ -171,7 +171,6 @@ fn parse_line(line: &str,
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
     // will take care of that.
-    split_asm_line(line);
     let mut instrs: Vec<Box<Instr>> = vec![];
 
     let comment_chars = "//";
@@ -193,11 +192,10 @@ fn parse_line(line: &str,
     if args.is_empty() && mnemonic.s.ends_with(':') {
         // Add a symbol for this address
         let sym_name = mnemonic.s[..mnemonic.len()-1].to_string();
-        match symbols.get(&sym_name) {
-            None => symbols.insert(sym_name, current_addr),
-            Some(_) => return Err(ErrInfo::new(
-                    "Label repeated".to_string(),
-                    mnemonic.pos, mnemonic.len())),
+        if let Some(_) = symbols.insert(sym_name, current_addr) {
+            return Err(ErrInfo::new(
+                "Label repeated".to_string(),
+                mnemonic.pos, mnemonic.len()));
         };
         return Ok(instrs);
     }

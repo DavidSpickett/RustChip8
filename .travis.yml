@@ -5,4 +5,4 @@ addons:
     packages:
     - libsdl2-dev
 env:
-  - RUSTFLAGS='-D warnings'
+  - RUSTFLAGS='-D warnings -W unused-results'
