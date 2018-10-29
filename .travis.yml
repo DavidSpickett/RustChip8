@@ -1,4 +1,4 @@
 language: rust
 cache: cargo
 before_install:
-- sudo apt-get install -y libsdl2-dev
+- sudo apt-get install -y libgles2-mesa-dev libsdl2-dev
