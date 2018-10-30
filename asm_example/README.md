@@ -2,4 +2,3 @@ This is a simple game to demonstrate the assembler. Controls are the standard W,
 
 Some limitations encountered when writing this example:
 * Defining constants would be useful, or labelling registers
-* A specific breakpoint instr would be nice, though you can at least trace by inserting invalid opcodes with .word
