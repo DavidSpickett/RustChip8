@@ -146,6 +146,14 @@ macro_rules! impl_instr_with_symbol {
     )
 }
 
+macro_rules! format_no_args {
+    () => (
+        fn get_formatted_args(&self) -> String {
+            "".to_string()
+        }
+    )
+}
+
 macro_rules! format_x_args {
     () => (
         fn get_formatted_args(&self) -> String {
@@ -421,10 +429,7 @@ impl Instr for JumpInstr {
 instr_no_args!(RetInstr, "RET", InstrFlags::_None, 0x00EE);
 impl Instr for RetInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        "".to_string()
-    }
+    format_no_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         if c8.stack.is_empty() {
@@ -471,10 +476,7 @@ impl Instr for LoadByteInstr {
 instr_no_args!(ClearDisplayInstr, "CLS", InstrFlags::Screen, 0x00E0);
 impl Instr for ClearDisplayInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        String::from("")
-    }
+    format_no_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         for p in c8.screen.iter_mut() {
