@@ -216,12 +216,26 @@ macro_rules! instr_struct_x_y {
     )
 }
 
-macro_rules! instr_struct_x_kk {
-    ( $instr_name:ident ) => (
+macro_rules! instr_x_kk {
+    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
             vx: u8,
             kk: u8,
+        }
+
+        impl $instr_name {
+            pub fn new(opc: u16) -> $instr_name {
+                $instr_name {
+                    core: InstrCore::new(opc, $flags, $mnemonic),
+                    vx: op_to_vx(opc),
+                    kk: op_to_kk(opc),
+                }
+            }
+
+            pub fn create(x: u8, kk: u8) -> $instr_name {
+                $instr_name::new(instr_builder::arg_x_kk($base, x, kk))
+            }
         }
     )
 }
@@ -408,21 +422,7 @@ impl Instr for RetInstr {
     }
 }
 
-instr_struct_x_kk!(SkipEqualInstr);
-impl SkipEqualInstr {
-    pub fn new(opc: u16) -> SkipEqualInstr {
-        SkipEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SE"),
-            vx: op_to_vx(opc),
-            kk: op_to_kk(opc),
-        }
-    }
-
-    pub fn create(x: u8, kk: u8) -> SkipEqualInstr {
-        SkipEqualInstr::new(instr_builder::arg_x_kk(0x3000, x, kk))
-    }
-}
-
+instr_x_kk!(SkipEqualInstr, "SE", InstrFlags::_None, 0x3000);
 impl Instr for SkipEqualInstr {
     impl_instr!();
     format_x_kk_args!();
@@ -434,21 +434,7 @@ impl Instr for SkipEqualInstr {
     }
 }
 
-instr_struct_x_kk!(SkipNotEqualInstr);
-impl SkipNotEqualInstr {
-    pub fn new(opc: u16) -> SkipNotEqualInstr {
-        SkipNotEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SNE"),
-            vx: op_to_vx(opc),
-            kk: op_to_kk(opc),
-        }
-    }
-
-    pub fn create(x: u8, kk: u8) -> SkipNotEqualInstr {
-        SkipNotEqualInstr::new(instr_builder::arg_x_kk(0x4000, x, kk))
-    }
-}
-
+instr_x_kk!(SkipNotEqualInstr, "SNE", InstrFlags::_None, 0x4000);
 impl Instr for SkipNotEqualInstr {
     impl_instr!();
     format_x_kk_args!();
@@ -460,21 +446,7 @@ impl Instr for SkipNotEqualInstr {
     }
 }
 
-instr_struct_x_kk!(LoadByteInstr);
-impl LoadByteInstr {
-    pub fn new(opc: u16) -> LoadByteInstr {
-        LoadByteInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
-            vx: op_to_vx(opc),
-            kk: op_to_kk(opc),
-        }
-    }
-
-    pub fn create(x: u8, kk: u8) -> LoadByteInstr {
-        LoadByteInstr::new(instr_builder::arg_x_kk(0x6000, x, kk))
-    }
-}
-
+instr_x_kk!(LoadByteInstr, "LD", InstrFlags::_None, 0x6000);
 impl Instr for LoadByteInstr {
     impl_instr!();
     format_x_kk_args!();
@@ -799,21 +771,7 @@ impl Instr for LoadIInstr {
     }
 }
 
-instr_struct_x_kk!(AddByteInstr);
-impl AddByteInstr {
-    pub fn new(opc: u16) -> AddByteInstr {
-        AddByteInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "ADD"),
-            vx: op_to_vx(opc),
-            kk: op_to_kk(opc),
-        }
-    }
-
-    pub fn create(x: u8, kk: u8) -> AddByteInstr {
-        AddByteInstr::new(instr_builder::arg_x_kk(0x7000, x, kk))
-    }
-}
-
+instr_x_kk!(AddByteInstr, "ADD", InstrFlags::_None, 0x7000);
 impl Instr for AddByteInstr {
     impl_instr!();
     format_x_kk_args!();
@@ -1129,21 +1087,7 @@ impl Instr for SetSoundTimerInstr {
     }
 }
 
-instr_struct_x_kk!(RandomInstr);
-impl RandomInstr {
-    pub fn new(opc: u16) -> RandomInstr {
-        RandomInstr {
-            core: InstrCore::new(opc, InstrFlags::Sound, "RND"),
-            vx: op_to_vx(opc),
-            kk: op_to_kk(opc),
-        }
-    }
-
-    pub fn create(x: u8, kk: u8) -> RandomInstr {
-        RandomInstr::new(instr_builder::arg_x_kk(0xC000, x, kk))
-    }
-}
-
+instr_x_kk!(RandomInstr, "RND", InstrFlags::_None, 0xC000);
 impl Instr for RandomInstr {
     impl_instr!();
     format_x_kk_args!();
