@@ -198,6 +198,16 @@ macro_rules! instr_struct_no_args {
     )
 }
 
+macro_rules! instr_struct_x_y {
+    ( $instr_name:ident ) => (
+        pub struct $instr_name {
+            core: InstrCore,
+            vx: u8,
+            vy: u8,
+        }
+    )
+}
+
 #[allow(dead_code)]
 pub struct UndefInstr {
     core: InstrCore,
@@ -507,12 +517,7 @@ impl Instr for ClearDisplayInstr {
     }
 }
 
-pub struct MovRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(MovRegInstr);
 impl MovRegInstr {
     pub fn new(opc: u16) -> MovRegInstr {
         MovRegInstr {
@@ -536,12 +541,7 @@ impl Instr for MovRegInstr {
     }
 }
 
-pub struct OrRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(OrRegInstr);
 impl OrRegInstr {
     pub fn new(opc: u16) -> OrRegInstr {
         OrRegInstr {
@@ -566,12 +566,7 @@ impl Instr for OrRegInstr {
     }
 }
 
-pub struct AndRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(AndRegInstr);
 impl AndRegInstr {
     pub fn new(opc: u16) -> AndRegInstr {
         AndRegInstr {
@@ -595,12 +590,7 @@ impl Instr for AndRegInstr {
     }
 }
 
-pub struct XORRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(XORRegInstr);
 impl XORRegInstr {
     pub fn new(opc: u16) -> XORRegInstr {
         XORRegInstr {
@@ -624,12 +614,7 @@ impl Instr for XORRegInstr {
     }
 }
 
-pub struct AddRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(AddRegInstr);
 impl AddRegInstr {
     pub fn new(opc: u16) -> AddRegInstr {
         AddRegInstr {
@@ -662,12 +647,7 @@ impl Instr for AddRegInstr {
     }
 }
 
-pub struct SubRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(SubRegInstr);
 impl SubRegInstr {
     pub fn new(opc: u16) -> SubRegInstr {
         SubRegInstr {
@@ -695,12 +675,7 @@ impl Instr for SubRegInstr {
     }
 }
 
-pub struct SubNRegInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(SubNRegInstr);
 impl SubNRegInstr {
     pub fn new(opc: u16) -> SubNRegInstr {
         SubNRegInstr {
@@ -1201,12 +1176,7 @@ impl Instr for RandomInstr {
     }
 }
 
-pub struct SkipIfRegsEqualInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(SkipIfRegsEqualInstr);
 impl SkipIfRegsEqualInstr {
     pub fn new(opc: u16) -> SkipIfRegsEqualInstr {
         SkipIfRegsEqualInstr {
@@ -1232,12 +1202,7 @@ impl Instr for SkipIfRegsEqualInstr {
     }
 }
 
-pub struct SkipIfRegsNotEqualInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-}
-
+instr_struct_x_y!(SkipIfRegsNotEqualInstr);
 impl SkipIfRegsNotEqualInstr {
     pub fn new(opc: u16) -> SkipIfRegsNotEqualInstr {
         SkipIfRegsNotEqualInstr {
