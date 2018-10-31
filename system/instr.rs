@@ -146,17 +146,6 @@ macro_rules! impl_instr_with_symbol {
     )
 }
 
-macro_rules! impl_addr_or_symbol {
-    () => (
-        fn get_addr(&self) -> u16 {
-            match self.nnn {
-                AddressOrSymbol::Address(a) => a,
-                AddressOrSymbol::Symbol(ref s) => panic!("Cannot get address for unresolved symbol \"{}\"", s),
-            }
-        }
-    )
-}
-
 macro_rules! format_x_y_args {
     () => (
         fn get_formatted_args(&self) -> String {
@@ -189,11 +178,37 @@ macro_rules! format_nnn {
     )
 }
 
-macro_rules! instr_struct_symbol {
-    ( $instr_name:ident ) => (
+macro_rules! instr_symbol {
+    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
             nnn: AddressOrSymbol,
+        }
+
+        impl $instr_name {
+            pub fn new(opc: u16) -> $instr_name {
+                $instr_name {
+                    core: InstrCore::new(opc, $flags, $mnemonic),
+                    nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
+                }
+            }
+
+            pub fn create(target: u16) -> $instr_name {
+                $instr_name::new(instr_builder::arg_nnn($base, target))
+            }
+
+            pub fn create_with_symbol(sym: String) -> $instr_name {
+                let mut i = $instr_name::create(0);
+                i.nnn = AddressOrSymbol::Symbol(sym);
+                i
+            }
+            
+            fn get_addr(&self) -> u16 {
+                match self.nnn {
+                    AddressOrSymbol::Address(a) => a,
+                    AddressOrSymbol::Symbol(ref s) => panic!("Cannot get address for unresolved symbol \"{}\"", s),
+                }
+            }
         }
     )
 }
@@ -321,28 +336,7 @@ impl Instr for WordInstr {
     }
 }
 
-instr_struct_symbol!(SysInstr);
-impl SysInstr {
-    impl_addr_or_symbol!();
-
-    pub fn new(opc: u16) -> SysInstr {
-        SysInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SYS"),
-            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
-        }
-    }
-
-    pub fn create(target: u16) -> SysInstr {
-        SysInstr::new(instr_builder::arg_nnn(0x0000, target))
-    }
-
-    pub fn create_with_symbol(sym: String) -> SysInstr {
-        let mut i = SysInstr::create(0);
-        i.nnn = AddressOrSymbol::Symbol(sym);
-        i
-    }
-}
-
+instr_symbol!(SysInstr, "SYS", InstrFlags::_None, 0x0000);
 impl Instr for SysInstr {
     impl_instr_with_symbol!();
     format_nnn!();
@@ -353,28 +347,7 @@ impl Instr for SysInstr {
     }
 }
 
-instr_struct_symbol!(CallInstr);
-impl CallInstr {
-    impl_addr_or_symbol!();
-
-    pub fn new(opc: u16) -> CallInstr {
-        CallInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "CALL"),
-            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
-        }
-    }
-
-    pub fn create(target: u16) -> CallInstr {
-        CallInstr::new(instr_builder::arg_nnn(0x2000, target))
-    }
-
-    pub fn create_with_symbol(sym: String) -> CallInstr {
-        let mut i = CallInstr::create(0);
-        i.nnn = AddressOrSymbol::Symbol(sym);
-        i
-    }
-}
-
+instr_symbol!(CallInstr, "CALL", InstrFlags::_None, 0x2000);
 impl Instr for CallInstr {
     impl_instr_with_symbol!();
     format_nnn!();
@@ -389,28 +362,7 @@ impl Instr for CallInstr {
     }
 }
 
-instr_struct_symbol!(JumpInstr);
-impl JumpInstr {
-    impl_addr_or_symbol!();
-
-    pub fn new(opc: u16) -> JumpInstr {
-        JumpInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "JP"),
-            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
-        }
-    }
-
-    pub fn create(target: u16) -> JumpInstr {
-        JumpInstr::new(instr_builder::arg_nnn(0x1000, target))
-    }
-
-    pub fn create_with_symbol(sym: String) -> JumpInstr {
-        let mut i = JumpInstr::create(0);
-        i.nnn = AddressOrSymbol::Symbol(sym);
-        i
-    }
-}
-
+instr_symbol!(JumpInstr, "JP", InstrFlags::_None, 0x1000);
 impl Instr for JumpInstr {
     impl_instr_with_symbol!();
     format_nnn!();
@@ -637,28 +589,7 @@ impl Instr for ShlRegInstr {
     }
 }
 
-instr_struct_symbol!(LoadIInstr);
-impl LoadIInstr {
-    impl_addr_or_symbol!();
-
-    pub fn new(opc: u16) -> LoadIInstr {
-        LoadIInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
-            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
-        }
-    }
-
-    pub fn create(target: u16) -> LoadIInstr {
-        LoadIInstr::new(instr_builder::arg_nnn(0xA000, target))
-    }
-
-    pub fn create_with_symbol(sym: String) -> LoadIInstr {
-        let mut i = LoadIInstr::create(0);
-        i.nnn = AddressOrSymbol::Symbol(sym);
-        i
-    }
-}
-
+instr_symbol!(LoadIInstr, "LD", InstrFlags::_None, 0xA000);
 impl Instr for LoadIInstr {
     impl_instr_with_symbol!();
 
@@ -1025,28 +956,7 @@ impl Instr for SkipIfRegsNotEqualInstr {
     }
 }
 
-instr_struct_symbol!(JumpPlusVZeroInstr);
-impl JumpPlusVZeroInstr {
-    impl_addr_or_symbol!();
-
-    pub fn new(opc: u16) -> JumpPlusVZeroInstr {
-        JumpPlusVZeroInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "JP"),
-            nnn: AddressOrSymbol::Address(op_to_nnn(opc)),
-        }
-    }
-
-    pub fn create(target: u16) -> JumpPlusVZeroInstr {
-        JumpPlusVZeroInstr::new(instr_builder::arg_nnn(0xB000, target))
-    }
-
-    pub fn create_with_symbol(sym: String) -> JumpPlusVZeroInstr {
-        let mut i = JumpPlusVZeroInstr::create(0);
-        i.nnn = AddressOrSymbol::Symbol(sym);
-        i
-    }
-}
-
+instr_symbol!(JumpPlusVZeroInstr, "JP", InstrFlags::_None, 0xB000);
 impl Instr for JumpPlusVZeroInstr {
     impl_instr_with_symbol!();
 
