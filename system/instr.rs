@@ -181,6 +181,23 @@ macro_rules! format_nnn {
     )
 }
 
+macro_rules! instr_struct_symbol {
+    ( $instr_name:ident ) => (
+        pub struct $instr_name {
+            core: InstrCore,
+            nnn: AddressOrSymbol,
+        }
+    )
+}
+
+macro_rules! instr_struct_no_args {
+    ( $instr_name:ident ) => (
+        pub struct $instr_name {
+            core: InstrCore,
+        }
+    )
+}
+
 #[allow(dead_code)]
 pub struct UndefInstr {
     core: InstrCore,
@@ -236,11 +253,7 @@ impl Instr for WordInstr {
     }
 }
 
-pub struct SysInstr {
-    core: InstrCore,
-    nnn: AddressOrSymbol,
-}
-
+instr_struct_symbol!(SysInstr);
 impl SysInstr {
     impl_addr_or_symbol!();
 
@@ -272,11 +285,7 @@ impl Instr for SysInstr {
     }
 }
 
-pub struct CallInstr {
-    core: InstrCore,
-    nnn: AddressOrSymbol,
-}
-
+instr_struct_symbol!(CallInstr);
 impl CallInstr {
     impl_addr_or_symbol!();
 
@@ -312,11 +321,7 @@ impl Instr for CallInstr {
     }
 }
 
-pub struct JumpInstr {
-    core: InstrCore,
-    nnn: AddressOrSymbol,
-}
-
+instr_struct_symbol!(JumpInstr);
 impl JumpInstr {
     impl_addr_or_symbol!();
 
@@ -347,10 +352,7 @@ impl Instr for JumpInstr {
     }
 }
 
-pub struct RetInstr {
-    core: InstrCore,
-}
-
+instr_struct_no_args!(RetInstr);
 impl RetInstr {
     pub fn new(opc: u16) -> RetInstr {
         RetInstr {
@@ -478,10 +480,7 @@ impl Instr for LoadByteInstr {
     }
 }
 
-pub struct ClearDisplayInstr {
-    core: InstrCore,
-}
-
+instr_struct_no_args!(ClearDisplayInstr);
 impl ClearDisplayInstr {
     pub fn new(opc: u16) -> ClearDisplayInstr {
         ClearDisplayInstr {
@@ -794,11 +793,7 @@ impl Instr for ShlRegInstr {
     }
 }
 
-pub struct LoadIInstr {
-    core: InstrCore,
-    nnn: AddressOrSymbol,
-}
-
+instr_struct_symbol!(LoadIInstr);
 impl LoadIInstr {
     impl_addr_or_symbol!();
 
@@ -1268,11 +1263,7 @@ impl Instr for SkipIfRegsNotEqualInstr {
     }
 }
 
-pub struct JumpPlusVZeroInstr {
-    core: InstrCore,
-    nnn: AddressOrSymbol,
-}
-
+instr_struct_symbol!(JumpPlusVZeroInstr);
 impl JumpPlusVZeroInstr {
     impl_addr_or_symbol!();
 
