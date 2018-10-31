@@ -198,10 +198,22 @@ macro_rules! instr_struct_symbol {
     )
 }
 
-macro_rules! instr_struct_no_args {
-    ( $instr_name:ident ) => (
+macro_rules! instr_no_args {
+    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
+        }
+
+        impl $instr_name {
+            pub fn new(opc: u16) -> $instr_name {
+                $instr_name {
+                    core: InstrCore::new(opc, $flags, $mnemonic),
+                }
+            }
+
+            pub fn create() -> $instr_name {
+                $instr_name::new(instr_builder::no_args($base))
+            }
         }
     )
 }
@@ -408,19 +420,7 @@ impl Instr for JumpInstr {
     }
 }
 
-instr_struct_no_args!(RetInstr);
-impl RetInstr {
-    pub fn new(opc: u16) -> RetInstr {
-        RetInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "RET"),
-        }
-    }
-
-    pub fn create() -> RetInstr {
-        RetInstr::new(instr_builder::no_args(0x00EE))
-    }
-}
-
+instr_no_args!(RetInstr, "RET", InstrFlags::_None, 0x00EE);
 impl Instr for RetInstr {
     impl_instr!();
 
@@ -470,19 +470,7 @@ impl Instr for LoadByteInstr {
     }
 }
 
-instr_struct_no_args!(ClearDisplayInstr);
-impl ClearDisplayInstr {
-    pub fn new(opc: u16) -> ClearDisplayInstr {
-        ClearDisplayInstr {
-            core: InstrCore::new(opc, InstrFlags::Screen, "CLS"),
-        }
-    }
-
-    pub fn create() -> ClearDisplayInstr {
-        ClearDisplayInstr::new(instr_builder::no_args(0x00E0))
-    }
-}
-
+instr_no_args!(ClearDisplayInstr, "CLS", InstrFlags::Screen, 0x00E0);
 impl Instr for ClearDisplayInstr {
     impl_instr!();
 
