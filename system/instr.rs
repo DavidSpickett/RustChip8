@@ -165,6 +165,14 @@ macro_rules! format_x_y_args {
     )
 }
 
+macro_rules! format_x_kk_args {
+    () => (
+        fn get_formatted_args(&self) -> String {
+            format!("V{}, 0x{:02X}", self.vx, self.kk)
+        }
+    )
+}
+
 pub enum AddressOrSymbol {
     Address(u16),
     Symbol(String),
@@ -204,6 +212,16 @@ macro_rules! instr_struct_x_y {
             core: InstrCore,
             vx: u8,
             vy: u8,
+        }
+    )
+}
+
+macro_rules! instr_struct_x_kk {
+    ( $instr_name:ident ) => (
+        pub struct $instr_name {
+            core: InstrCore,
+            vx: u8,
+            kk: u8,
         }
     )
 }
@@ -390,12 +408,7 @@ impl Instr for RetInstr {
     }
 }
 
-pub struct SkipEqualInstr {
-    core: InstrCore,
-    vx: u8,
-    kk: u8,
-}
-
+instr_struct_x_kk!(SkipEqualInstr);
 impl SkipEqualInstr {
     pub fn new(opc: u16) -> SkipEqualInstr {
         SkipEqualInstr {
@@ -412,10 +425,7 @@ impl SkipEqualInstr {
 
 impl Instr for SkipEqualInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02X}", self.vx, self.kk)
-    }
+    format_x_kk_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         if c8.v_regs[self.vx as usize] == self.kk {
@@ -424,12 +434,7 @@ impl Instr for SkipEqualInstr {
     }
 }
 
-pub struct SkipNotEqualInstr {
-    core: InstrCore,
-    vx: u8,
-    kk: u8,
-}
-
+instr_struct_x_kk!(SkipNotEqualInstr);
 impl SkipNotEqualInstr {
     pub fn new(opc: u16) -> SkipNotEqualInstr {
         SkipNotEqualInstr {
@@ -446,10 +451,7 @@ impl SkipNotEqualInstr {
 
 impl Instr for SkipNotEqualInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02X}", self.vx, self.kk)
-    }
+    format_x_kk_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         if c8.v_regs[self.vx as usize] != self.kk {
@@ -458,12 +460,7 @@ impl Instr for SkipNotEqualInstr {
     }
 }
 
-pub struct LoadByteInstr {
-    core: InstrCore,
-    vx: u8,
-    kk: u8,
-}
-
+instr_struct_x_kk!(LoadByteInstr);
 impl LoadByteInstr {
     pub fn new(opc: u16) -> LoadByteInstr {
         LoadByteInstr {
@@ -480,10 +477,7 @@ impl LoadByteInstr {
 
 impl Instr for LoadByteInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02X}", self.vx, self.kk)
-    }
+    format_x_kk_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = self.kk;
@@ -805,12 +799,7 @@ impl Instr for LoadIInstr {
     }
 }
 
-pub struct AddByteInstr {
-    core: InstrCore,
-    vx: u8,
-    kk: u8,
-}
-
+instr_struct_x_kk!(AddByteInstr);
 impl AddByteInstr {
     pub fn new(opc: u16) -> AddByteInstr {
         AddByteInstr {
@@ -827,10 +816,7 @@ impl AddByteInstr {
 
 impl Instr for AddByteInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02X}", self.vx, self.kk)
-    }
+    format_x_kk_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         c8.v_regs[self.vx as usize] = c8.v_regs[self.vx as usize].wrapping_add(self.kk)
@@ -1143,12 +1129,7 @@ impl Instr for SetSoundTimerInstr {
     }
 }
 
-pub struct RandomInstr {
-    core: InstrCore,
-    vx: u8,
-    kk: u8,
-}
-
+instr_struct_x_kk!(RandomInstr);
 impl RandomInstr {
     pub fn new(opc: u16) -> RandomInstr {
         RandomInstr {
@@ -1165,10 +1146,7 @@ impl RandomInstr {
 
 impl Instr for RandomInstr {
     impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, 0x{:02X}", self.vx, self.kk)
-    }
+    format_x_kk_args!();
 
     fn exec(&self, c8: &mut Chip8System) {
         let mut rng = rand::thread_rng();
