@@ -15,11 +15,11 @@ use std::io::Write;
 
 pub fn main() {
     let help = "\
-            ./rchip8 <mode> <file> <scaling factor (-i) / output file name (-a)>\n\
+            rchip8 <mode> <file> <scaling factor (-i) / output file name (-a)> -s (-i only)\n\
             \n\
             The two modes are:\n\
                 -a : assembler, where <file> is an assembly file\n\
-                -i : interpret, where <file> is a ROM file\n\
+                -i : interpret, where <file> is a ROM file and '-s' eanbles sound\n\
             \n\
             Scaling factor multiplies the size of each Chip8 pixel. (default 1)\n\
             e.g. 2 means each block is 2x2 pixels in the final output.";
@@ -33,6 +33,7 @@ pub fn main() {
     let mut rom_path: Option<String> = None;
     let mut output_file: Option<String> = None;
     let mut scaling_factor = 1;
+    let mut sound_enable = false;
 
     let args = env::args().collect::<Vec<String>>();
 
@@ -71,7 +72,7 @@ pub fn main() {
                         Mode::Interpret => "ROM",
                         Mode::Assemble => "Assembly",
                     };
-                    println!("{} file \"{}\" not found.", argument, file_type);
+                    println!("{} file \"{}\" not found.", file_type, argument);
                     process::exit(1);
                 }
             },
@@ -89,6 +90,23 @@ pub fn main() {
                     Mode::Assemble => output_file = Some(argument.to_string()),
                 };
             },
+            4 => {
+                match mode {
+                    Mode::Interpret => {
+                        match argument.as_str() {
+                            "-s" => sound_enable = true,
+                            _ => {
+                                println!("Expected \"-s\", got \"{}\"", argument);
+                                process::exit(1);
+                            }
+                        };
+                    }
+                    Mode::Assemble => {
+                        println!("Too many arguments to assemble mode.");
+                        process::exit(1);
+                    }
+                }
+            }
             _ => {
                 println!("Unexpected argument \"{}\" in position {}", argument, pos);
                 process::exit(1);
@@ -97,7 +115,7 @@ pub fn main() {
     }
 
     match mode {
-        Mode::Interpret => interpret_file(scaling_factor, &rom_path.unwrap()),
+        Mode::Interpret => interpret_file(scaling_factor, &rom_path.unwrap(), sound_enable),
         Mode::Assemble => assemble_file(&rom_path.unwrap(), &output_file.unwrap()),
     }
 }
@@ -141,8 +159,8 @@ fn assemble_file(asm_path: &str, output_file: &str) {
     }
 }
 
-fn interpret_file(scaling_factor: i32, rom_path: &str) {
-    let (mut canvas, mut event_pump) = sdl_init(scaling_factor);
+fn interpret_file(scaling_factor: i32, rom_path: &str, sound: bool) {
+    let (mut canvas, mut event_pump, audio_controller) = sdl_init(scaling_factor);
     let mut c8 = make_system(&read_rom(rom_path));
 
     'running: loop {
@@ -164,6 +182,13 @@ fn interpret_file(scaling_factor: i32, rom_path: &str) {
         }
 
         c8.execute(&instr);
+
+        if sound {
+            match c8.sound_timer {
+                0 => audio_controller.pause(),
+                _ => audio_controller.resume(),
+            };
+        }
 
         if flags == system::InstrFlags::Screen {
             draw_screen(scaling_factor, &mut canvas, &c8.screen);

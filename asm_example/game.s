@@ -159,6 +159,8 @@ game:
   SE VF, 1
   JP no_hit
   ADD V6, 1
+  LD V0, 0x10
+  LD ST, V0
   SNE V6, 11
   JP game_win
   CALL place_object

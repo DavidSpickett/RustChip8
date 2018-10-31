@@ -7,10 +7,43 @@ use sdl::sdl2::keyboard::Scancode;
 use sdl::sdl2::rect::Rect;
 use sdl::sdl2::render::WindowCanvas;
 use sdl::sdl2::EventPump;
+use sdl::sdl2::audio::{AudioCallback, AudioSpecDesired, AudioDevice};
 use system::{SCREEN_WIDTH, SCREEN_HEIGHT};
 
+struct SquareWave {
+    phase_inc: f32,
+    phase: f32,
+    volume: f32
+}
 
-pub fn sdl_init(pixel_size: i32) -> (WindowCanvas, EventPump) {
+impl AudioCallback for SquareWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [f32]) {
+        // Generate a square wave
+        for x in out.iter_mut() {
+            *x = if self.phase <= 0.5 { self.volume } else { -self.volume };
+            self.phase = (self.phase + self.phase_inc) % 1.0;
+        }
+    }
+}
+
+// So we don't have to leak the template type
+pub struct AudioController {
+    device: AudioDevice<SquareWave>,
+}
+
+impl AudioController {
+    pub fn resume(&self) {
+        self.device.resume();
+    }
+
+    pub fn pause(&self) {
+        self.device.pause();
+    }
+}
+
+pub fn sdl_init(pixel_size: i32) -> (WindowCanvas, EventPump, AudioController) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -25,7 +58,23 @@ pub fn sdl_init(pixel_size: i32) -> (WindowCanvas, EventPump) {
     let canvas = window.into_canvas().build().unwrap();
     let event_pump = sdl_context.event_pump().unwrap();
 
-    (canvas, event_pump)
+    let audio_subsystem = sdl_context.audio().unwrap();
+
+    let desired_spec = AudioSpecDesired {
+        freq: Some(44_100),
+        channels: Some(1),  // mono
+        samples: Some(128),
+    };
+
+    let device = audio_subsystem.open_playback(None, &desired_spec, |spec| {
+        SquareWave {
+            phase_inc: 440.0 / spec.freq as f32,
+            phase: 0.0,
+            volume: 0.25
+        }
+    }).unwrap();
+
+    (canvas, event_pump, AudioController{device})
 }
 
 //Note that these are in the chip8's order, not the PC's keyboard layout

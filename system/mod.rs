@@ -60,7 +60,7 @@ pub struct Chip8System {
     i_reg : u16,
     stack : Vec<u16>,
     delay_timer : u8,
-    sound_timer : u8,
+    pub sound_timer : u8,
 }
 
 impl Chip8System {
@@ -277,20 +277,31 @@ impl Chip8System {
     }
 
     pub fn fetch_and_decode(&mut self) -> Box<Instr> {
+        // TODO: base these on actual frequencies, not number of instructions
         unsafe {
-            static mut DELAY_TIMER_FUDGE: u16 = 100;
-            //TODO: better way to do/time this
-            if DELAY_TIMER_FUDGE != 0 {
-                DELAY_TIMER_FUDGE -= 1;
-            } else {
-                if self.delay_timer != 0 {
-                    self.delay_timer -= 1;
+            static DT_FUDGE_RESET: u16 = 100;
+            static mut DT_FUDGE: u16 = DT_FUDGE_RESET;
+            DT_FUDGE = match DT_FUDGE {
+                0 => {
+                    if self.delay_timer != 0 {
+                        self.delay_timer -= 1;
+                    }
+                    DT_FUDGE_RESET
                 }
-                DELAY_TIMER_FUDGE = 100;
-            }
-            if self.sound_timer != 0 {
-                self.sound_timer -= 1;
-            }
+                _ => DT_FUDGE - 1,
+            };
+
+            static ST_FUDGE_RESET: u16 = 150;
+            static mut ST_FUDGE: u16 = ST_FUDGE_RESET;
+            ST_FUDGE = match ST_FUDGE {
+                0 => {
+                    if self.sound_timer != 0 {
+                        self.sound_timer -= 1;
+                    }
+                    ST_FUDGE_RESET
+                },
+                _ => ST_FUDGE - 1,
+            };
         }
 
         let opc = self.fetch();

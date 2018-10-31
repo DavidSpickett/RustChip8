@@ -1,3 +1,3 @@
 all:
 	rchip8 -a game.s game.o
-	rchip8 -i game.o 20
+	rchip8 -i game.o 20 -s
