@@ -206,16 +206,6 @@ macro_rules! instr_struct_no_args {
     )
 }
 
-macro_rules! instr_struct_x_y {
-    ( $instr_name:ident ) => (
-        pub struct $instr_name {
-            core: InstrCore,
-            vx: u8,
-            vy: u8,
-        }
-    )
-}
-
 macro_rules! instr_x_kk {
     ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
         pub struct $instr_name {
@@ -235,6 +225,30 @@ macro_rules! instr_x_kk {
 
             pub fn create(x: u8, kk: u8) -> $instr_name {
                 $instr_name::new(instr_builder::arg_x_kk($base, x, kk))
+            }
+        }
+    )
+}
+
+macro_rules! instr_x_y {
+    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
+        pub struct $instr_name {
+            core: InstrCore,
+            vx: u8,
+            vy: u8,
+        }
+
+        impl $instr_name {
+            pub fn new(opc: u16) -> $instr_name {
+                $instr_name {
+                    core: InstrCore::new(opc, $flags, $mnemonic),
+                    vx: op_to_vx(opc),
+                    vy: op_to_vy(opc),
+                }
+            }
+
+            pub fn create(x: u8, y: u8) -> $instr_name {
+                $instr_name::new(instr_builder::arg_x_y($base, x, y))
             }
         }
     )
@@ -483,21 +497,7 @@ impl Instr for ClearDisplayInstr {
     }
 }
 
-instr_struct_x_y!(MovRegInstr);
-impl MovRegInstr {
-    pub fn new(opc: u16) -> MovRegInstr {
-        MovRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "LD"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> MovRegInstr {
-        MovRegInstr::new(instr_builder::arg_x_y(0x8000, x, y))
-    }
-}
-
+instr_x_y!(MovRegInstr, "LD", InstrFlags::_None, 0x8000);
 impl Instr for MovRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -507,22 +507,7 @@ impl Instr for MovRegInstr {
     }
 }
 
-instr_struct_x_y!(OrRegInstr);
-impl OrRegInstr {
-    pub fn new(opc: u16) -> OrRegInstr {
-        OrRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "OR"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> OrRegInstr {
-        OrRegInstr::new(instr_builder::arg_x_y(0x8001, x, y))
-    }
-
-}
-
+instr_x_y!(OrRegInstr, "OR", InstrFlags::_None, 0x8001);
 impl Instr for OrRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -532,21 +517,7 @@ impl Instr for OrRegInstr {
     }
 }
 
-instr_struct_x_y!(AndRegInstr);
-impl AndRegInstr {
-    pub fn new(opc: u16) -> AndRegInstr {
-        AndRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "AND"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> AndRegInstr {
-        AndRegInstr::new(instr_builder::arg_x_y(0x8002, x, y))
-    }
-}
-
+instr_x_y!(AndRegInstr, "AND", InstrFlags::_None, 0x8002);
 impl Instr for AndRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -556,21 +527,7 @@ impl Instr for AndRegInstr {
     }
 }
 
-instr_struct_x_y!(XORRegInstr);
-impl XORRegInstr {
-    pub fn new(opc: u16) -> XORRegInstr {
-        XORRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "XOR"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> XORRegInstr {
-        XORRegInstr::new(instr_builder::arg_x_y(0x8003, x, y))
-    }
-}
-
+instr_x_y!(XORRegInstr, "XOR", InstrFlags::_None, 0x8003);
 impl Instr for XORRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -580,21 +537,7 @@ impl Instr for XORRegInstr {
     }
 }
 
-instr_struct_x_y!(AddRegInstr);
-impl AddRegInstr {
-    pub fn new(opc: u16) -> AddRegInstr {
-        AddRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "ADD"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> AddRegInstr {
-        AddRegInstr::new(instr_builder::arg_x_y(0x8004, x, y))
-    }
-}
-
+instr_x_y!(AddRegInstr, "ADD", InstrFlags::_None, 0x8004);
 impl Instr for AddRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -613,21 +556,7 @@ impl Instr for AddRegInstr {
     }
 }
 
-instr_struct_x_y!(SubRegInstr);
-impl SubRegInstr {
-    pub fn new(opc: u16) -> SubRegInstr {
-        SubRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SUB"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> SubRegInstr {
-        SubRegInstr::new(instr_builder::arg_x_y(0x8005, x, y))
-    }
-}
-
+instr_x_y!(SubRegInstr, "SUB", InstrFlags::_None, 0x8005);
 impl Instr for SubRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -641,21 +570,7 @@ impl Instr for SubRegInstr {
     }
 }
 
-instr_struct_x_y!(SubNRegInstr);
-impl SubNRegInstr {
-    pub fn new(opc: u16) -> SubNRegInstr {
-        SubNRegInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SUBN"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> SubNRegInstr {
-        SubNRegInstr::new(instr_builder::arg_x_y(0x8007, x, y))
-    }
-}
-
+instr_x_y!(SubNRegInstr, "SUBN", InstrFlags::_None, 0x8007);
 impl Instr for SubNRegInstr {
     impl_instr!();
     format_x_y_args!();
@@ -1098,21 +1013,7 @@ impl Instr for RandomInstr {
     }
 }
 
-instr_struct_x_y!(SkipIfRegsEqualInstr);
-impl SkipIfRegsEqualInstr {
-    pub fn new(opc: u16) -> SkipIfRegsEqualInstr {
-        SkipIfRegsEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SE"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> SkipIfRegsEqualInstr {
-        SkipIfRegsEqualInstr::new(instr_builder::arg_x_y(0x5000, x, y))
-    }
-}
-
+instr_x_y!(SkipIfRegsEqualInstr, "SE", InstrFlags::_None, 0x5000);
 impl Instr for SkipIfRegsEqualInstr {
     impl_instr!();
     format_x_y_args!();
@@ -1124,21 +1025,7 @@ impl Instr for SkipIfRegsEqualInstr {
     }
 }
 
-instr_struct_x_y!(SkipIfRegsNotEqualInstr);
-impl SkipIfRegsNotEqualInstr {
-    pub fn new(opc: u16) -> SkipIfRegsNotEqualInstr {
-        SkipIfRegsNotEqualInstr {
-            core: InstrCore::new(opc, InstrFlags::_None, "SNE"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-        }
-    }
-
-    pub fn create(x: u8, y: u8) -> SkipIfRegsNotEqualInstr {
-        SkipIfRegsNotEqualInstr::new(instr_builder::arg_x_y(0x9000, x, y))
-    }
-}
-
+instr_x_y!(SkipIfRegsNotEqualInstr, "SNE", InstrFlags::_None, 0x9000);
 impl Instr for SkipIfRegsNotEqualInstr {
     impl_instr!();
     format_x_y_args!();
