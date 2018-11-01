@@ -166,6 +166,15 @@ macro_rules! format_x_kk_args {
     )
 }
 
+fn make_nnn_format() -> impl Fn(&AddressOrSymbol) -> String {
+    | nnn: &AddressOrSymbol | {
+        match *nnn {
+            AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
+            AddressOrSymbol::Symbol(ref s) => s.to_string(),
+        }
+    }
+}
+
 pub enum AddressOrSymbol {
     Address(u16),
     Symbol(String),
@@ -389,13 +398,7 @@ impl Instr for WordInstr {
 }
 
 instr_symbol!(SysInstr, "SYS", InstrFlags::_None, 0x0000,
-| _addr, _c8 | {},
-| nnn: &AddressOrSymbol | {
-    match *nnn {
-        AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
-        AddressOrSymbol::Symbol(ref s) => s.to_string(),
-    }
-});
+| _addr, _c8 | {}, make_nnn_format());
 
 instr_symbol!(CallInstr, "CALL", InstrFlags::_None, 0x2000,
 | addr, c8: &mut Chip8System | {
@@ -405,24 +408,12 @@ instr_symbol!(CallInstr, "CALL", InstrFlags::_None, 0x2000,
 
     c8.stack.push(c8.pc);
     c8.pc = addr; 
-},
-| nnn: &AddressOrSymbol | {
-    match nnn {
-        AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
-        AddressOrSymbol::Symbol(ref s) => s.to_string(),
-    }
-});
+}, make_nnn_format());
 
 instr_symbol!(JumpInstr, "JP", InstrFlags::_None, 0x1000,
 | addr, c8: &mut Chip8System | {
     c8.pc = addr;
-},
-| nnn: &AddressOrSymbol | {
-    match nnn {
-        AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
-        AddressOrSymbol::Symbol(ref s) => s.to_string(),
-    }
-});
+}, make_nnn_format());
 
 instr_no_args!(RetInstr, "RET", InstrFlags::_None, 0x00EE);
 impl Instr for RetInstr {
