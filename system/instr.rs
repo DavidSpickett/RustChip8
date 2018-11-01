@@ -118,34 +118,6 @@ macro_rules! impl_instr {
     )
 }
 
-macro_rules! impl_instr_with_symbol {
-    () => (
-        impl_instr_base!();
-        fn get_opcode(&self) -> u16 {
-            let _ = self.get_addr();
-            self.core.opcode
-        }
-
-        fn get_symbol(&self) -> Option<String> {
-            match self.nnn {
-                AddressOrSymbol::Symbol(ref s) => Some(s.to_string()),
-                AddressOrSymbol::Address(_) => None,
-            }
-        }
-
-        fn resolve_symbol(&mut self, addr: u16) {
-            match self.nnn {
-                AddressOrSymbol::Symbol(_) => {
-                    self.nnn = AddressOrSymbol::Address(addr);
-                    // Update stored encoding
-                    self.core.opcode |= 0x0FFF & addr;
-                }
-                AddressOrSymbol::Address(_) => panic!("Symbol already resolved for this instruction!"),
-            }
-        }
-    )
-}
-
 macro_rules! format_no_args {
     () => (
         fn get_formatted_args(&self) -> String {
@@ -199,19 +171,9 @@ pub enum AddressOrSymbol {
     Symbol(String),
 }
 
-macro_rules! format_nnn {
-    () => (
-        fn get_formatted_args(&self) -> String {
-            match self.nnn {
-                AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
-                AddressOrSymbol::Symbol(ref s) => format!("{}", s),
-            }
-        }
-    )
-}
-
 macro_rules! instr_symbol {
-    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
+    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr,
+      $exec:expr, $formatter:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
             nnn: AddressOrSymbol,
@@ -240,6 +202,42 @@ macro_rules! instr_symbol {
                     AddressOrSymbol::Address(a) => a,
                     AddressOrSymbol::Symbol(ref s) => panic!("Cannot get address for unresolved symbol \"{}\"", s),
                 }
+            }
+        }
+
+        impl Instr for $instr_name {
+            impl_instr_base!();
+
+            // We call a closure because we can't access self directly
+            fn get_formatted_args(&self) -> String {
+                $formatter(&self.nnn)
+            }
+
+            fn get_opcode(&self) -> u16 {
+                let _ = self.get_addr();
+                self.core.opcode
+            }
+
+            fn get_symbol(&self) -> Option<String> {
+                match self.nnn {
+                    AddressOrSymbol::Symbol(ref s) => Some(s.to_string()),
+                    AddressOrSymbol::Address(_) => None,
+                }
+            }
+
+            fn resolve_symbol(&mut self, addr: u16) {
+                match self.nnn {
+                    AddressOrSymbol::Symbol(_) => {
+                        self.nnn = AddressOrSymbol::Address(addr);
+                        // Update stored encoding
+                        self.core.opcode |= 0x0FFF & addr;
+                    }
+                    AddressOrSymbol::Address(_) => panic!("Symbol already resolved for this instruction!"),
+                }
+            }
+
+            fn exec(&self, c8: &mut Chip8System) {
+                $exec(self.get_addr(), c8);
             }
         }
     )
@@ -390,41 +388,41 @@ impl Instr for WordInstr {
     }
 }
 
-instr_symbol!(SysInstr, "SYS", InstrFlags::_None, 0x0000);
-impl Instr for SysInstr {
-    impl_instr_with_symbol!();
-    format_nnn!();
-
-    fn exec(&self, _c8: &mut Chip8System) {
-        // Mostly pointless but just in case we do something with SYS later
-        let _ = self.get_addr();
+instr_symbol!(SysInstr, "SYS", InstrFlags::_None, 0x0000,
+| _addr, _c8 | {},
+| nnn: &AddressOrSymbol | {
+    match *nnn {
+        AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
+        AddressOrSymbol::Symbol(ref s) => s.to_string(),
     }
-}
+});
 
-instr_symbol!(CallInstr, "CALL", InstrFlags::_None, 0x2000);
-impl Instr for CallInstr {
-    impl_instr_with_symbol!();
-    format_nnn!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.stack.len() == 16 {
-            panic!("Stack is full!")
-        }
-
-        c8.stack.push(c8.pc);
-        c8.pc = self.get_addr();
+instr_symbol!(CallInstr, "CALL", InstrFlags::_None, 0x2000,
+| addr, c8: &mut Chip8System | {
+    if c8.stack.len() == 16 {
+        panic!("Stack is full!")
     }
-}
 
-instr_symbol!(JumpInstr, "JP", InstrFlags::_None, 0x1000);
-impl Instr for JumpInstr {
-    impl_instr_with_symbol!();
-    format_nnn!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.get_addr();
+    c8.stack.push(c8.pc);
+    c8.pc = addr; 
+},
+| nnn: &AddressOrSymbol | {
+    match nnn {
+        AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
+        AddressOrSymbol::Symbol(ref s) => s.to_string(),
     }
-}
+});
+
+instr_symbol!(JumpInstr, "JP", InstrFlags::_None, 0x1000,
+| addr, c8: &mut Chip8System | {
+    c8.pc = addr;
+},
+| nnn: &AddressOrSymbol | {
+    match nnn {
+        AddressOrSymbol::Address(a) => format!("0x{:03X}", a),
+        AddressOrSymbol::Symbol(ref s) => s.to_string(),
+    }
+});
 
 instr_no_args!(RetInstr, "RET", InstrFlags::_None, 0x00EE);
 impl Instr for RetInstr {
@@ -596,21 +594,16 @@ impl Instr for ShlRegInstr {
     }
 }
 
-instr_symbol!(LoadIInstr, "LD", InstrFlags::_None, 0xA000);
-impl Instr for LoadIInstr {
-    impl_instr_with_symbol!();
-
-    fn get_formatted_args(&self) -> String {
-        match self.nnn {
-            AddressOrSymbol::Address(a) => format!("I, 0x{:03X}", a),
-            AddressOrSymbol::Symbol(ref s) => format!("I, {}", s),
-        }
+instr_symbol!(LoadIInstr, "LD", InstrFlags::_None, 0xA000,
+| addr, c8: &mut Chip8System | {
+    c8.i_reg = addr;
+},
+| nnn: &AddressOrSymbol | {
+    match nnn {
+        AddressOrSymbol::Address(a) => format!("I, 0x{:03X}", a),
+        AddressOrSymbol::Symbol(ref s) => format!("I, {}", s),
     }
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.i_reg = self.get_addr();
-    }
-}
+});
 
 instr_x_kk!(AddByteInstr, "ADD", InstrFlags::_None, 0x7000);
 impl Instr for AddByteInstr {
@@ -803,21 +796,16 @@ impl Instr for SkipIfRegsNotEqualInstr {
     }
 }
 
-instr_symbol!(JumpPlusVZeroInstr, "JP", InstrFlags::_None, 0xB000);
-impl Instr for JumpPlusVZeroInstr {
-    impl_instr_with_symbol!();
-
-    fn get_formatted_args(&self) -> String {
-        match self.nnn {
-            AddressOrSymbol::Address(a) => format!("V0, 0x{:03X}", a),
-            AddressOrSymbol::Symbol(ref s) => format!("V0, {}", s),
-        }
+instr_symbol!(JumpPlusVZeroInstr, "JP", InstrFlags::_None, 0xB000,
+| addr, c8: &mut Chip8System | {
+    c8.pc = addr + u16::from(c8.v_regs[0]);
+},
+| nnn: &AddressOrSymbol | {
+    match nnn {
+        AddressOrSymbol::Address(a) => format!("V0, 0x{:03X}", a),
+        AddressOrSymbol::Symbol(ref s) => format!("V0, {}", s),
     }
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.pc = self.get_addr() + u16::from(c8.v_regs[0]);
-    }
-}
+});
 
 instr_x!(GetDigitAddrInstr, "LD", InstrFlags::_None, 0xF029);
 impl Instr for GetDigitAddrInstr {
