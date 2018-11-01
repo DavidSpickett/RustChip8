@@ -6,3 +6,9 @@ addons:
     - libsdl2-dev
 env:
   - RUSTFLAGS='-D warnings -W unused-results'
+before_script:
+  - rustup component add clippy-preview
+script:
+  - cargo build --verbose --all
+  - cargo test --verbose --all
+  - cargo clippy -- -D warnings
