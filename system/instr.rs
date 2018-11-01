@@ -126,30 +126,6 @@ macro_rules! format_no_args {
     )
 }
 
-macro_rules! format_x_args {
-    () => (
-        fn get_formatted_args(&self) -> String {
-            format!("V{}", self.vx)
-        }
-    )
-}
-
-macro_rules! format_reg_x_args {
-    ($reg:expr) => (
-        fn get_formatted_args(&self) -> String {
-            format!("{}, V{}", $reg, self.vx)
-        }
-    )
-}
-
-macro_rules! format_x_reg_args {
-    ($reg:expr) => (
-        fn get_formatted_args(&self) -> String {
-            format!("V{}, {}", self.vx, $reg)
-        }
-    )
-}
-
 fn make_nnn_format() -> impl Fn(&AddressOrSymbol) -> String {
     | nnn: &AddressOrSymbol | {
         match *nnn {
@@ -330,8 +306,13 @@ macro_rules! instr_x_y {
     )
 }
 
+fn make_format_x() -> impl Fn(u8) -> String {
+    | vx | { format!("V{}", vx) }
+}
+
 macro_rules! instr_x {
-    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
+    ( $instr_name:ident, $mnemonic:expr, $flags:path,
+      $base:expr, $exec:expr, $formatter:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
             vx: u8,
@@ -347,6 +328,19 @@ macro_rules! instr_x {
 
             pub fn create(x: u8) -> $instr_name {
                 $instr_name::new(instr_builder::arg_x($base, x))
+            }
+        }
+
+        impl Instr for $instr_name {
+            impl_instr!();
+
+            fn get_formatted_args(&self) -> String {
+                $formatter(self.vx)
+            }
+
+
+            fn exec(&self, c8: &mut Chip8System) {
+                $exec(c8, self.vx);
             }
         }
     )
@@ -521,29 +515,19 @@ instr_x_y!(SubNRegInstr, "SUBN", InstrFlags::_None, 0x8007,
     c8.v_regs[15] = (y>x) as u8;
 });
 
-instr_x!(ShrRegInstr, "SHR", InstrFlags::_None, 0x8006);
-impl Instr for ShrRegInstr {
-    impl_instr!();
-    format_x_args!();
+instr_x!(ShrRegInstr, "SHR", InstrFlags::_None, 0x8006,
+| c8: &mut Chip8System, vx | {
+    let x = c8.v_regs[vx as usize];
+    c8.v_regs[15] = x & 1;
+    c8.v_regs[vx as usize] >>= 1;
+}, make_format_x());
 
-    fn exec(&self, c8: &mut Chip8System) {
-        let x = c8.v_regs[self.vx as usize];
-        c8.v_regs[15] = x & 1;
-        c8.v_regs[self.vx as usize] >>= 1;
-    }
-}
-
-instr_x!(ShlRegInstr, "SHL", InstrFlags::_None, 0x800E);
-impl Instr for ShlRegInstr {
-    impl_instr!();
-    format_x_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let x = c8.v_regs[self.vx as usize];
-        c8.v_regs[15] = x >> 7;
-        c8.v_regs[self.vx as usize] <<= 1;
-    }
-}
+instr_x!(ShlRegInstr, "SHL", InstrFlags::_None, 0x800E,
+| c8: &mut Chip8System, vx | {
+    let x = c8.v_regs[vx as usize];
+    c8.v_regs[15] = x >> 7;
+    c8.v_regs[vx as usize] <<= 1;
+}, make_format_x());
 
 instr_symbol!(LoadIInstr, "LD", InstrFlags::_None, 0xA000,
 | addr, c8: &mut Chip8System | {
@@ -561,35 +545,23 @@ instr_x_kk!(AddByteInstr, "ADD", InstrFlags::_None, 0x7000,
     c8.v_regs[vx as usize] = c8.v_regs[vx as usize].wrapping_add(kk)
 });
 
-instr_x!(AddIVInstr, "ADD", InstrFlags::_None, 0xF01E);
-impl Instr for AddIVInstr {
-    impl_instr!();
-    format_reg_x_args!("I");
+instr_x!(AddIVInstr, "ADD", InstrFlags::_None, 0xF01E,
+| c8: &mut Chip8System, vx | {
+    c8.i_reg = c8.i_reg.wrapping_add(u16::from(c8.v_regs[vx as usize]))
+},
+| vx | { format!("I, V{}", vx) });
 
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.i_reg = c8.i_reg.wrapping_add(u16::from(c8.v_regs[self.vx as usize]))
-    }
-}
+instr_x!(SetDelayTimerInstr, "LD", InstrFlags::_None, 0xF015,
+| c8: &mut Chip8System, vx | {
+    c8.delay_timer = c8.v_regs[vx as usize]
+}, 
+| vx | { format!("DT, V{}", vx) });
 
-instr_x!(SetDelayTimerInstr, "LD", InstrFlags::_None, 0xF015);
-impl Instr for SetDelayTimerInstr {
-    impl_instr!();
-    format_reg_x_args!("DT");
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.delay_timer = c8.v_regs[self.vx as usize]
-    }
-}
-
-instr_x!(GetDelayTimerInstr, "LD", InstrFlags::_None, 0xF007);
-impl Instr for GetDelayTimerInstr {
-    impl_instr!();
-    format_x_reg_args!("DT");
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] = c8.delay_timer
-    }
-}
+instr_x!(GetDelayTimerInstr, "LD", InstrFlags::_None, 0xF007,
+| c8: &mut Chip8System, vx | {
+    c8.v_regs[vx as usize] = c8.delay_timer
+},
+| vx | { format!("V{}, DT", vx) });
 
 pub struct DrawSpriteInstr {
     core: InstrCore,
@@ -647,65 +619,43 @@ impl Instr for DrawSpriteInstr {
     }
 }
 
-instr_x!(SkipKeyIfPressedInstr, "SKP", InstrFlags::Keys, 0xE09E);
-impl Instr for SkipKeyIfPressedInstr {
-    impl_instr!();
-    format_x_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.get_keystate(c8.v_regs[self.vx as usize]) {
-            c8.pc += 2;
-        }
+instr_x!(SkipKeyIfPressedInstr, "SKP", InstrFlags::Keys, 0xE09E,
+| c8: &mut Chip8System, vx | {
+    if c8.get_keystate(c8.v_regs[vx as usize]) {
+        c8.pc += 2;
     }
-}
+}, make_format_x());
 
-instr_x!(SkipKeyIfNotPressedInstr, "SKNP", InstrFlags::Keys, 0xE0A1);
-impl Instr for SkipKeyIfNotPressedInstr {
-    impl_instr!();
-    format_x_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if !c8.get_keystate(c8.v_regs[self.vx as usize]) {
-            c8.pc += 2;
-        }
+instr_x!(SkipKeyIfNotPressedInstr, "SKNP", InstrFlags::Keys, 0xE0A1,
+| c8: &mut Chip8System, vx | {
+    if !c8.get_keystate(c8.v_regs[vx as usize]) {
+        c8.pc += 2;
     }
-}
+}, make_format_x());
 
-instr_x!(ReadRegsFromMemInstr, "LD", InstrFlags::_None, 0xF065);
-impl Instr for ReadRegsFromMemInstr {
-    impl_instr!();
-    format_x_reg_args!("[I]");
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let addr = c8.bounds_check_i(self.vx+1);
-        for reg_idx in 0..(self.vx+1) {
-            c8.v_regs[reg_idx as usize] = c8.memory[addr+(reg_idx as usize)];
-        }
+instr_x!(ReadRegsFromMemInstr, "LD", InstrFlags::_None, 0xF065,
+| c8: &mut Chip8System, vx | {
+    let addr = c8.bounds_check_i(vx+1);
+    for reg_idx in 0..(vx+1) {
+        c8.v_regs[reg_idx as usize] = c8.memory[addr+(reg_idx as usize)];
     }
-}
+}, 
+| vx | { format!("V{}, [I]", vx) });
 
-instr_x!(WriteRegsToMemInstr, "LD", InstrFlags::_None, 0xF055);
-impl Instr for WriteRegsToMemInstr {
-    impl_instr!();
-    format_reg_x_args!("[I]");
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let addr = c8.bounds_check_i(self.vx+1);
-        for reg_idx in 0..(self.vx+1) {
-            c8.memory[addr+(reg_idx as usize)] = c8.v_regs[reg_idx as usize];
-        }
+instr_x!(WriteRegsToMemInstr, "LD", InstrFlags::_None, 0xF055,
+| c8: &mut Chip8System, vx | {
+    let addr = c8.bounds_check_i(vx+1);
+    for reg_idx in 0..(vx+1) {
+        c8.memory[addr+(reg_idx as usize)] = c8.v_regs[reg_idx as usize];
     }
-}
+},
+| vx | { format!("[I], V{}", vx) });
 
-instr_x!(SetSoundTimerInstr, "LD", InstrFlags::Sound, 0xF018);
-impl Instr for SetSoundTimerInstr {
-    impl_instr!();
-    format_reg_x_args!("ST");
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.sound_timer = c8.v_regs[self.vx as usize];
-    }
-}
+instr_x!(SetSoundTimerInstr, "LD", InstrFlags::Sound, 0xF018,
+| c8: &mut Chip8System, vx | {
+    c8.sound_timer = c8.v_regs[vx as usize];
+},
+| vx | { format!("ST, V{}", vx) });
 
 instr_x_kk!(RandomInstr, "RND", InstrFlags::_None, 0xC000,
 | c8: &mut Chip8System, vx, kk | {
@@ -738,46 +688,34 @@ instr_symbol!(JumpPlusVZeroInstr, "JP", InstrFlags::_None, 0xB000,
     }
 });
 
-instr_x!(GetDigitAddrInstr, "LD", InstrFlags::_None, 0xF029);
-impl Instr for GetDigitAddrInstr {
-    impl_instr!();
-    format_reg_x_args!("F");
+instr_x!(GetDigitAddrInstr, "LD", InstrFlags::_None, 0xF029,
+| c8: &mut Chip8System, vx | {
+    let digit = u16::from(c8.v_regs[vx as usize]);
+    c8.i_reg = digit*5;
+},
+| vx | { format!("F, V{}", vx) });
 
-    fn exec(&self, c8: &mut Chip8System) {
-        let digit = u16::from(c8.v_regs[self.vx as usize]);
-        c8.i_reg = digit*5;
-    }
-}
+instr_x!(StoreBCDInstr, "LD", InstrFlags::_None, 0xF033,
+| c8: &mut Chip8System, vx | {
+    let mut value = c8.v_regs[vx as usize];
+    let mut addr = c8.bounds_check_i(3);
 
-instr_x!(StoreBCDInstr, "LD", InstrFlags::_None, 0xF033);
-impl Instr for StoreBCDInstr {
-    impl_instr!();
-    format_reg_x_args!("B");
+    let hundreds = value / 100;
+    c8.memory[addr] = hundreds;
+    value -= 100 * hundreds;
+    addr += 1;
 
-    fn exec(&self, c8: &mut Chip8System) {
-        let mut value = c8.v_regs[self.vx as usize];
-        let mut addr = c8.bounds_check_i(3);
+    let tens = value / 10;
+    c8.memory[addr] = tens;
+    value -= 10 * tens;
+    addr += 1;
 
-        let hundreds = value / 100;
-        c8.memory[addr] = hundreds;
-        value -= 100 * hundreds;
-        addr += 1;
+    c8.memory[addr] = value;
+},
+| vx| { format!("B, V{}", vx) });
 
-        let tens = value / 10;
-        c8.memory[addr] = tens;
-        value -= 10 * tens;
-        addr += 1;
-
-        c8.memory[addr] = value;
-    }
-}
-
-instr_x!(WaitForKeyInstr, "LD", InstrFlags::WaitKey, 0xF00A);
-impl Instr for WaitForKeyInstr {
-    impl_instr!();
-    format_x_reg_args!("K");
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] = c8.pressed_key as u8;
-    }
-}
+instr_x!(WaitForKeyInstr, "LD", InstrFlags::WaitKey, 0xF00A,
+| c8: &mut Chip8System, vx | {
+    c8.v_regs[vx as usize] = c8.pressed_key as u8;
+},
+| vx | { format!("V{}, K", vx) });
