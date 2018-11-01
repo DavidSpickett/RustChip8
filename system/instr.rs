@@ -150,14 +150,6 @@ macro_rules! format_x_reg_args {
     )
 }
 
-macro_rules! format_x_y_args {
-    () => (
-        fn get_formatted_args(&self) -> String {
-            format!("V{}, V{}", self.vx, self.vy)
-        }
-    )
-}
-
 fn make_nnn_format() -> impl Fn(&AddressOrSymbol) -> String {
     | nnn: &AddressOrSymbol | {
         match *nnn {
@@ -302,7 +294,8 @@ macro_rules! instr_x_kk {
 }
 
 macro_rules! instr_x_y {
-    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
+    ( $instr_name:ident, $mnemonic:expr, $flags:path,
+      $base:expr, $exec:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
             vx: u8,
@@ -320,6 +313,18 @@ macro_rules! instr_x_y {
 
             pub fn create(x: u8, y: u8) -> $instr_name {
                 $instr_name::new(instr_builder::arg_x_y($base, x, y))
+            }
+        }
+
+        impl Instr for $instr_name {
+            impl_instr!();
+
+            fn get_formatted_args(&self) -> String {
+                format!("V{}, V{}", self.vx, self.vy)
+            }
+
+            fn exec(&self, c8: &mut Chip8System) {
+                $exec(c8, self.vx, self.vy);
             }
         }
     )
@@ -464,92 +469,57 @@ impl Instr for ClearDisplayInstr {
     }
 }
 
-instr_x_y!(MovRegInstr, "LD", InstrFlags::_None, 0x8000);
-impl Instr for MovRegInstr {
-    impl_instr!();
-    format_x_y_args!();
+instr_x_y!(MovRegInstr, "LD", InstrFlags::_None, 0x8000,
+| c8: &mut Chip8System, vx, vy | {
+    c8.v_regs[vx as usize] = c8.v_regs[vy as usize];
+});
 
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] = c8.v_regs[self.vy as usize];
+instr_x_y!(OrRegInstr, "OR", InstrFlags::_None, 0x8001,
+| c8: &mut Chip8System, vx, vy | {
+    c8.v_regs[vx as usize] |= c8.v_regs[vy as usize];
+});
+
+instr_x_y!(AndRegInstr, "AND", InstrFlags::_None, 0x8002,
+| c8: &mut Chip8System, vx, vy | {
+    c8.v_regs[vx as usize] &= c8.v_regs[vy as usize];
+});
+
+instr_x_y!(XORRegInstr, "XOR", InstrFlags::_None, 0x8003,
+| c8: &mut Chip8System, vx, vy | {
+    c8.v_regs[vx as usize] ^= c8.v_regs[vy as usize];
+});
+
+instr_x_y!(AddRegInstr, "ADD", InstrFlags::_None, 0x8004,
+| c8: &mut Chip8System, vx, vy | {
+    let x = c8.v_regs[vx as usize];
+    let y = c8.v_regs[vy as usize];
+
+    c8.v_regs[vx as usize] = c8.v_regs[vx as usize].wrapping_add(y);
+
+    if (u16::from(x) + u16::from(y)) > 0xFF {
+        c8.v_regs[15] = 1;
+    } else {
+        c8.v_regs[15] = 0;
     }
-}
+});
 
-instr_x_y!(OrRegInstr, "OR", InstrFlags::_None, 0x8001);
-impl Instr for OrRegInstr {
-    impl_instr!();
-    format_x_y_args!();
+instr_x_y!(SubRegInstr, "SUB", InstrFlags::_None, 0x8005,
+| c8: &mut Chip8System, vx, vy | {
+    let x = c8.v_regs[vx as usize];
+    let y = c8.v_regs[vy as usize];
 
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] |= c8.v_regs[self.vy as usize];
-    }
-}
+    c8.v_regs[vx as usize] = x.wrapping_sub(y);
+    c8.v_regs[15] = (x>y) as u8;
+});
 
-instr_x_y!(AndRegInstr, "AND", InstrFlags::_None, 0x8002);
-impl Instr for AndRegInstr {
-    impl_instr!();
-    format_x_y_args!();
+instr_x_y!(SubNRegInstr, "SUBN", InstrFlags::_None, 0x8007,
+| c8: &mut Chip8System, vx, vy | {
+    let x = c8.v_regs[vx as usize];
+    let y = c8.v_regs[vy as usize];
 
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] &= c8.v_regs[self.vy as usize];
-    }
-}
-
-instr_x_y!(XORRegInstr, "XOR", InstrFlags::_None, 0x8003);
-impl Instr for XORRegInstr {
-    impl_instr!();
-    format_x_y_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] ^= c8.v_regs[self.vy as usize];
-    }
-}
-
-instr_x_y!(AddRegInstr, "ADD", InstrFlags::_None, 0x8004);
-impl Instr for AddRegInstr {
-    impl_instr!();
-    format_x_y_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let x = c8.v_regs[self.vx as usize];
-        let y = c8.v_regs[self.vy as usize];
-
-        c8.v_regs[self.vx as usize] = c8.v_regs[self.vx as usize].wrapping_add(y);
-
-        if (u16::from(x) + u16::from(y)) > 0xFF {
-            c8.v_regs[15] = 1;
-        } else {
-            c8.v_regs[15] = 0;
-        }
-    }
-}
-
-instr_x_y!(SubRegInstr, "SUB", InstrFlags::_None, 0x8005);
-impl Instr for SubRegInstr {
-    impl_instr!();
-    format_x_y_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let x = c8.v_regs[self.vx as usize];
-        let y = c8.v_regs[self.vy as usize];
-
-        c8.v_regs[self.vx as usize] = x.wrapping_sub(y);
-        c8.v_regs[15] = (x>y) as u8;
-    }
-}
-
-instr_x_y!(SubNRegInstr, "SUBN", InstrFlags::_None, 0x8007);
-impl Instr for SubNRegInstr {
-    impl_instr!();
-    format_x_y_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let x = c8.v_regs[self.vx as usize];
-        let y = c8.v_regs[self.vy as usize];
-
-        c8.v_regs[self.vx as usize] = y.wrapping_sub(x);
-        c8.v_regs[15] = (y>x) as u8;
-    }
-}
+    c8.v_regs[vx as usize] = y.wrapping_sub(x);
+    c8.v_regs[15] = (y>x) as u8;
+});
 
 instr_x!(ShrRegInstr, "SHR", InstrFlags::_None, 0x8006);
 impl Instr for ShrRegInstr {
@@ -743,29 +713,19 @@ instr_x_kk!(RandomInstr, "RND", InstrFlags::_None, 0xC000,
     c8.v_regs[vx as usize] = kk & rng.gen::<u8>();
 });
 
-instr_x_y!(SkipIfRegsEqualInstr, "SE", InstrFlags::_None, 0x5000);
-impl Instr for SkipIfRegsEqualInstr {
-    impl_instr!();
-    format_x_y_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.v_regs[self.vx as usize] == c8.v_regs[self.vy as usize] {
-            c8.pc += 2;
-        }
+instr_x_y!(SkipIfRegsEqualInstr, "SE", InstrFlags::_None, 0x5000,
+| c8: &mut Chip8System, vx, vy | {
+    if c8.v_regs[vx as usize] == c8.v_regs[vy as usize] {
+        c8.pc += 2;
     }
-}
+});
 
-instr_x_y!(SkipIfRegsNotEqualInstr, "SNE", InstrFlags::_None, 0x9000);
-impl Instr for SkipIfRegsNotEqualInstr {
-    impl_instr!();
-    format_x_y_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.v_regs[self.vx as usize] != c8.v_regs[self.vy as usize] {
-            c8.pc += 2;
-        }
+instr_x_y!(SkipIfRegsNotEqualInstr, "SNE", InstrFlags::_None, 0x9000,
+| c8: &mut Chip8System, vx, vy | {
+    if c8.v_regs[vx as usize] != c8.v_regs[vy as usize] {
+        c8.pc += 2;
     }
-}
+});
 
 instr_symbol!(JumpPlusVZeroInstr, "JP", InstrFlags::_None, 0xB000,
 | addr, c8: &mut Chip8System | {
