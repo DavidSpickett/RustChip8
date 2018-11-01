@@ -401,6 +401,62 @@ impl Instr for WordInstr {
     }
 }
 
+pub struct DrawSpriteInstr {
+    core: InstrCore,
+    vx: u8,
+    vy: u8,
+    n: u8,
+}
+
+impl DrawSpriteInstr {
+    pub fn new(opc: u16) -> DrawSpriteInstr {
+        DrawSpriteInstr {
+            core: InstrCore::new(opc, InstrFlags::Screen, "DRW"),
+            vx: op_to_vx(opc),
+            vy: op_to_vy(opc),
+            n: (opc & 0xF) as u8,
+        }
+    }
+
+    pub fn create(x: u8, y: u8, n: u8) -> DrawSpriteInstr {
+        DrawSpriteInstr::new(instr_builder::arg_x_y_n(0xD000, x, y, n))
+    }
+}
+
+impl Instr for DrawSpriteInstr {
+    impl_instr!();
+
+    fn get_formatted_args(&self) -> String {
+        format!("V{}, V{}, {}", self.vx, self.vy, self.n)
+    }
+
+    fn exec(&self, c8: &mut Chip8System) {
+        //Clear overlap flag
+        c8.v_regs[15] = 0;
+
+        let x = c8.v_regs[self.vx as usize] as usize;
+        let y = c8.v_regs[self.vy as usize] as usize;
+        let addr = c8.bounds_check_i(self.n);
+        let sprite_data = &c8.memory[addr..addr+(self.n as usize)];
+
+        for (y_offset, row) in sprite_data.iter().enumerate() {
+            for sprite_x in (0..8).rev() {
+                let final_x = (x+7-sprite_x) % 64;
+                let final_y = (y + y_offset) % 32;
+                let screen_idx = (final_y*64)+final_x;
+
+                let pixel_set = *row & (1 << sprite_x) != 0; 
+                let pixel_was = c8.screen[screen_idx];
+                 
+                if pixel_set && pixel_was {
+                    c8.v_regs[15] = 1;
+                }
+                c8.screen[screen_idx] ^= pixel_set;
+            }
+        }
+    }
+}
+
 instr_symbol!(SysInstr, "SYS", InstrFlags::_None, 0x0000,
 | _addr, _c8 | {}, make_nnn_format());
 
@@ -562,62 +618,6 @@ instr_x!(GetDelayTimerInstr, "LD", InstrFlags::_None, 0xF007,
     c8.v_regs[vx as usize] = c8.delay_timer
 },
 | vx | { format!("V{}, DT", vx) });
-
-pub struct DrawSpriteInstr {
-    core: InstrCore,
-    vx: u8,
-    vy: u8,
-    n: u8,
-}
-
-impl DrawSpriteInstr {
-    pub fn new(opc: u16) -> DrawSpriteInstr {
-        DrawSpriteInstr {
-            core: InstrCore::new(opc, InstrFlags::Screen, "DRW"),
-            vx: op_to_vx(opc),
-            vy: op_to_vy(opc),
-            n: (opc & 0xF) as u8,
-        }
-    }
-
-    pub fn create(x: u8, y: u8, n: u8) -> DrawSpriteInstr {
-        DrawSpriteInstr::new(instr_builder::arg_x_y_n(0xD000, x, y, n))
-    }
-}
-
-impl Instr for DrawSpriteInstr {
-    impl_instr!();
-
-    fn get_formatted_args(&self) -> String {
-        format!("V{}, V{}, {}", self.vx, self.vy, self.n)
-    }
-
-    fn exec(&self, c8: &mut Chip8System) {
-        //Clear overlap flag
-        c8.v_regs[15] = 0;
-
-        let x = c8.v_regs[self.vx as usize] as usize;
-        let y = c8.v_regs[self.vy as usize] as usize;
-        let addr = c8.bounds_check_i(self.n);
-        let sprite_data = &c8.memory[addr..addr+(self.n as usize)];
-
-        for (y_offset, row) in sprite_data.iter().enumerate() {
-            for sprite_x in (0..8).rev() {
-                let final_x = (x+7-sprite_x) % 64;
-                let final_y = (y + y_offset) % 32;
-                let screen_idx = (final_y*64)+final_x;
-
-                let pixel_set = *row & (1 << sprite_x) != 0; 
-                let pixel_was = c8.screen[screen_idx];
-                 
-                if pixel_set && pixel_was {
-                    c8.v_regs[15] = 1;
-                }
-                c8.screen[screen_idx] ^= pixel_set;
-            }
-        }
-    }
-}
 
 instr_x!(SkipKeyIfPressedInstr, "SKP", InstrFlags::Keys, 0xE09E,
 | c8: &mut Chip8System, vx | {
