@@ -118,14 +118,6 @@ macro_rules! impl_instr {
     )
 }
 
-macro_rules! format_no_args {
-    () => (
-        fn get_formatted_args(&self) -> String {
-            "".to_string()
-        }
-    )
-}
-
 fn make_nnn_format() -> impl Fn(&AddressOrSymbol) -> String {
     | nnn: &AddressOrSymbol | {
         match *nnn {
@@ -213,7 +205,8 @@ macro_rules! instr_symbol {
 }
 
 macro_rules! instr_no_args {
-    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
+    ( $instr_name:ident, $mnemonic:expr, $flags:path,
+      $base:expr, $exec:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
         }
@@ -227,6 +220,18 @@ macro_rules! instr_no_args {
 
             pub fn create() -> $instr_name {
                 $instr_name::new(instr_builder::no_args($base))
+            }
+        }
+
+        impl Instr for $instr_name {
+            impl_instr!();
+
+            fn get_formatted_args(&self) -> String {
+                "".to_string()
+            }
+
+            fn exec(&self, c8: &mut Chip8System) {
+                $exec(c8);
             }
         }
     )
@@ -475,18 +480,13 @@ instr_symbol!(JumpInstr, "JP", InstrFlags::_None, 0x1000,
     c8.pc = addr;
 }, make_nnn_format());
 
-instr_no_args!(RetInstr, "RET", InstrFlags::_None, 0x00EE);
-impl Instr for RetInstr {
-    impl_instr!();
-    format_no_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.stack.is_empty() {
-            panic!("Stack is empty!");
-        }
-        c8.pc = c8.stack.pop().unwrap();
+instr_no_args!(RetInstr, "RET", InstrFlags::_None, 0x00EE,
+| c8: &mut Chip8System | {
+    if c8.stack.is_empty() {
+        panic!("Stack is empty!");
     }
-}
+    c8.pc = c8.stack.pop().unwrap();
+});
 
 instr_x_kk!(SkipEqualInstr, "SE", InstrFlags::_None, 0x3000,
 | c8: &mut Chip8System, vx, kk | {
@@ -507,17 +507,12 @@ instr_x_kk!(LoadByteInstr, "LD", InstrFlags::_None, 0x6000,
     c8.v_regs[vx as usize] = kk;
 });
 
-instr_no_args!(ClearDisplayInstr, "CLS", InstrFlags::Screen, 0x00E0);
-impl Instr for ClearDisplayInstr {
-    impl_instr!();
-    format_no_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
+instr_no_args!(ClearDisplayInstr, "CLS", InstrFlags::Screen, 0x00E0,
+| c8: &mut Chip8System | {
         for p in c8.screen.iter_mut() {
             *p = false;
         }
-    }
-}
+});
 
 instr_x_y!(MovRegInstr, "LD", InstrFlags::_None, 0x8000,
 | c8: &mut Chip8System, vx, vy | {
