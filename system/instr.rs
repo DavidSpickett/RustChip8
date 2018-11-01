@@ -158,14 +158,6 @@ macro_rules! format_x_y_args {
     )
 }
 
-macro_rules! format_x_kk_args {
-    () => (
-        fn get_formatted_args(&self) -> String {
-            format!("V{}, 0x{:02X}", self.vx, self.kk)
-        }
-    )
-}
-
 fn make_nnn_format() -> impl Fn(&AddressOrSymbol) -> String {
     | nnn: &AddressOrSymbol | {
         match *nnn {
@@ -273,7 +265,8 @@ macro_rules! instr_no_args {
 }
 
 macro_rules! instr_x_kk {
-    ( $instr_name:ident, $mnemonic:expr, $flags:path, $base:expr ) => (
+    ( $instr_name:ident, $mnemonic:expr, $flags:path,
+      $base:expr, $exec:expr ) => (
         pub struct $instr_name {
             core: InstrCore,
             vx: u8,
@@ -291,6 +284,18 @@ macro_rules! instr_x_kk {
 
             pub fn create(x: u8, kk: u8) -> $instr_name {
                 $instr_name::new(instr_builder::arg_x_kk($base, x, kk))
+            }
+        }
+
+        impl Instr for $instr_name {
+            impl_instr!();
+
+            fn get_formatted_args(&self) -> String {
+                format!("V{}, 0x{:02X}", self.vx, self.kk)
+            }
+
+            fn exec(&self, c8: &mut Chip8System) {
+                $exec(c8, self.vx, self.kk);
             }
         }
     )
@@ -428,39 +433,24 @@ impl Instr for RetInstr {
     }
 }
 
-instr_x_kk!(SkipEqualInstr, "SE", InstrFlags::_None, 0x3000);
-impl Instr for SkipEqualInstr {
-    impl_instr!();
-    format_x_kk_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.v_regs[self.vx as usize] == self.kk {
+instr_x_kk!(SkipEqualInstr, "SE", InstrFlags::_None, 0x3000,
+| c8: &mut Chip8System, vx, kk | {
+    if c8.v_regs[vx as usize] == kk {
             c8.pc += 2;
-        }
     }
-}
+});
 
-instr_x_kk!(SkipNotEqualInstr, "SNE", InstrFlags::_None, 0x4000);
-impl Instr for SkipNotEqualInstr {
-    impl_instr!();
-    format_x_kk_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        if c8.v_regs[self.vx as usize] != self.kk {
+instr_x_kk!(SkipNotEqualInstr, "SNE", InstrFlags::_None, 0x4000,
+| c8: &mut Chip8System, vx, kk | {
+    if c8.v_regs[vx as usize] != kk {
             c8.pc +=2;
-        }
     }
-}
+});
 
-instr_x_kk!(LoadByteInstr, "LD", InstrFlags::_None, 0x6000);
-impl Instr for LoadByteInstr {
-    impl_instr!();
-    format_x_kk_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] = self.kk;
-    }
-}
+instr_x_kk!(LoadByteInstr, "LD", InstrFlags::_None, 0x6000,
+| c8: &mut Chip8System, vx, kk | {
+    c8.v_regs[vx as usize] = kk;
+});
 
 instr_no_args!(ClearDisplayInstr, "CLS", InstrFlags::Screen, 0x00E0);
 impl Instr for ClearDisplayInstr {
@@ -596,15 +586,10 @@ instr_symbol!(LoadIInstr, "LD", InstrFlags::_None, 0xA000,
     }
 });
 
-instr_x_kk!(AddByteInstr, "ADD", InstrFlags::_None, 0x7000);
-impl Instr for AddByteInstr {
-    impl_instr!();
-    format_x_kk_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        c8.v_regs[self.vx as usize] = c8.v_regs[self.vx as usize].wrapping_add(self.kk)
-    }
-}
+instr_x_kk!(AddByteInstr, "ADD", InstrFlags::_None, 0x7000,
+| c8: &mut Chip8System, vx, kk | {
+    c8.v_regs[vx as usize] = c8.v_regs[vx as usize].wrapping_add(kk)
+});
 
 instr_x!(AddIVInstr, "ADD", InstrFlags::_None, 0xF01E);
 impl Instr for AddIVInstr {
@@ -752,16 +737,11 @@ impl Instr for SetSoundTimerInstr {
     }
 }
 
-instr_x_kk!(RandomInstr, "RND", InstrFlags::_None, 0xC000);
-impl Instr for RandomInstr {
-    impl_instr!();
-    format_x_kk_args!();
-
-    fn exec(&self, c8: &mut Chip8System) {
-        let mut rng = rand::thread_rng();
-        c8.v_regs[self.vx as usize] = self.kk & rng.gen::<u8>();
-    }
-}
+instr_x_kk!(RandomInstr, "RND", InstrFlags::_None, 0xC000,
+| c8: &mut Chip8System, vx, kk | {
+    let mut rng = rand::thread_rng();
+    c8.v_regs[vx as usize] = kk & rng.gen::<u8>();
+});
 
 instr_x_y!(SkipIfRegsEqualInstr, "SE", InstrFlags::_None, 0x5000);
 impl Instr for SkipIfRegsEqualInstr {
