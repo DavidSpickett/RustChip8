@@ -364,47 +364,7 @@ fn parse_line(line: &str,
                     } else if args[0].str_cmp("I") {
                         // Special 16 bit address sequence
                         if let Ok(addr) = parse_extended_addr(&args[1]) {
-                            if addr <= 0xFFF {
-                                instrs.push(Box::new(LoadIInstr::create(addr)));
-                            } else {
-                                // We're going to change I anyway so we can trash it
-                                let rest_of_addr = addr - 0xFFF;
-                                instrs.push(Box::new(LoadIInstr::create(0xFFF)));
-
-                                // Number of ADD I, Vx we have to do with 0xFF
-                                // Can't think of another way other than reserving a register here
-                                let regnum: u8 = 14;
-                                let max_regval: u16 = 0xFF;
-                                let num_adds = (rest_of_addr / max_regval) as u8;
-                                // Remainder value for the last ADD
-                                let remainder = (rest_of_addr % max_regval) as u8;
-
-                                if num_adds != 0 {
-                                    instrs.push(Box::new(LoadByteInstr::create(regnum, max_regval as u8)));
-                                    for _ in 0..num_adds {
-                                        instrs.push(Box::new(AddIVInstr::create(regnum)));
-                                    }
-                                }
-
-                                if remainder != 0 {
-                                    instrs.push(Box::new(LoadByteInstr::create(regnum, remainder)));
-                                    instrs.push(Box::new(AddIVInstr::create(regnum)));
-                                }
-
-                                /* TADA! You just loaded a 16 bit address into I
-                                   but gave up a register temporarily to do it.
-
-                                   The reason you can't save/restore is as follows:
-                                   - Set I to some location (font memory/high addr?)
-                                   - Save V0 to memory
-                                   - Do stuff with it to get I to the high address
-                                   - Then set I back to the saved V0 location
-                                   ....
-
-                                   Which defeats the point of this whole silly exercise.
-                                   Also restoring the memory you save to is tricky.
-                                */
-                            }
+                            emit_extended_load(&mut instrs, addr);
                         } else {
                             // LD I, nnn
                             // Using the *2nd* argument!
@@ -450,42 +410,106 @@ fn parse_line(line: &str,
             }
         }
         ArgsType::VX => {
-            let x = match parse_vx(&args[0]) {
-                Err(e) => return Err(e),
-                Ok(v) => v,
-            };
-
-            match mnemonic.upper.as_str() {
-                "SHR"   => instrs.push(Box::new(ShrRegInstr::create(x))),
-                "SHL"   => instrs.push(Box::new(ShlRegInstr::create(x))),
-                "SKP"   => instrs.push(Box::new(SkipKeyIfPressedInstr::create(x))),
-                "SKNP"  => instrs.push(Box::new(SkipKeyIfNotPressedInstr::create(x))),
-                _ => panic!("Unknown mnemonic {} with VX args", mnemonic.s),
+            if let Err(e) = handle_vx_mnemonic(&mut instrs, &mnemonic, &args) {
+                return Err(e);
             }
         }
         ArgsType::VXVY => {
-            let x = match parse_vx(&args[0]) {
-                Err(e) => return Err(e),
-                Ok(v) => v,
-            };
-
-            let y = match parse_vx(&args[1]) {
-                Err(e) => return Err(e),
-                Ok(v) => v,
-            };
-
-            match mnemonic.upper.as_str() {
-                "OR"    => instrs.push(Box::new(OrRegInstr::create(x, y))),
-                "XOR"    => instrs.push(Box::new(XORRegInstr::create(x, y))),
-                "AND"    => instrs.push(Box::new(AndRegInstr::create(x, y))),
-                "SUB"    => instrs.push(Box::new(SubRegInstr::create(x, y))),
-                "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(x, y))),
-                _ => panic!("Unknown mnemonic {} with VXVY args", mnemonic.s),
+            if let Err(e) = handle_vxvy_mnemonic(&mut instrs, &mnemonic, &args) {
+                return Err(e);
             }
         }
     }
 
     Ok(instrs)
+}
+
+fn emit_extended_load(instrs: &mut Vec<Box<Instr>>, addr: u16) {
+    if addr <= 0xFFF {
+        instrs.push(Box::new(LoadIInstr::create(addr)));
+    } else {
+        // We're going to change I anyway so we can trash it
+        let rest_of_addr = addr - 0xFFF;
+        instrs.push(Box::new(LoadIInstr::create(0xFFF)));
+
+        // Number of ADD I, Vx we have to do with 0xFF
+        // Can't think of another way other than reserving a register here
+        let regnum: u8 = 14;
+        let max_regval: u16 = 0xFF;
+        let num_adds = (rest_of_addr / max_regval) as u8;
+        // Remainder value for the last ADD
+        let remainder = (rest_of_addr % max_regval) as u8;
+
+        if num_adds != 0 {
+            instrs.push(Box::new(LoadByteInstr::create(regnum, max_regval as u8)));
+            for _ in 0..num_adds {
+                instrs.push(Box::new(AddIVInstr::create(regnum)));
+            }
+        }
+
+        if remainder != 0 {
+            instrs.push(Box::new(LoadByteInstr::create(regnum, remainder)));
+            instrs.push(Box::new(AddIVInstr::create(regnum)));
+        }
+
+        /* TADA! You just loaded a 16 bit address into I
+           but gave up a register temporarily to do it.
+
+           The reason you can't save/restore is as follows:
+           - Set I to some location (font memory/high addr?)
+           - Save V0 to memory
+           - Do stuff with it to get I to the high address
+           - Then set I back to the saved V0 location
+           ....
+
+           Which defeats the point of this whole silly exercise.
+           Also restoring the memory you save to is tricky.
+        */
+    }
+}
+
+fn handle_vx_mnemonic(instrs: &mut Vec<Box<Instr>>,
+                        mnemonic: &AsmArg,
+                        args: &[AsmArg]) -> Result<(), ErrInfo> {
+    let x = match parse_vx(&args[0]) {
+        Err(e) => return Err(e),
+        Ok(v) => v,
+    };
+
+    match mnemonic.upper.as_str() {
+        "SHR"   => instrs.push(Box::new(ShrRegInstr::create(x))),
+        "SHL"   => instrs.push(Box::new(ShlRegInstr::create(x))),
+        "SKP"   => instrs.push(Box::new(SkipKeyIfPressedInstr::create(x))),
+        "SKNP"  => instrs.push(Box::new(SkipKeyIfNotPressedInstr::create(x))),
+        _ => panic!("Unknown mnemonic {} with VX args", mnemonic.s),
+    };
+
+    Ok(())
+}
+
+fn handle_vxvy_mnemonic(instrs: &mut Vec<Box<Instr>>,
+                        mnemonic: &AsmArg,
+                        args: &[AsmArg]) -> Result<(), ErrInfo> {
+    let x = match parse_vx(&args[0]) {
+        Err(e) => return Err(e),
+        Ok(v) => v,
+    };
+
+    let y = match parse_vx(&args[1]) {
+        Err(e) => return Err(e),
+        Ok(v) => v,
+    };
+
+    match mnemonic.upper.as_str() {
+        "OR"    => instrs.push(Box::new(OrRegInstr::create(x, y))),
+        "XOR"    => instrs.push(Box::new(XORRegInstr::create(x, y))),
+        "AND"    => instrs.push(Box::new(AndRegInstr::create(x, y))),
+        "SUB"    => instrs.push(Box::new(SubRegInstr::create(x, y))),
+        "SUBN"   => instrs.push(Box::new(SubNRegInstr::create(x, y))),
+        _ => panic!("Unknown mnemonic {} with VXVY args", mnemonic.s),
+    };
+
+    Ok(())
 }
 
 enum ArgsType {
