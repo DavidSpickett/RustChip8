@@ -192,7 +192,7 @@ fn parse_line(line: &str,
     if args.is_empty() && mnemonic.s.ends_with(':') {
         // Add a symbol for this address
         let sym_name = mnemonic.s[..mnemonic.len()-1].to_string();
-        if let Some(_) = symbols.insert(sym_name, current_addr) {
+        if symbols.insert(sym_name, current_addr).is_some() {
             return Err(ErrInfo::new(
                 "Label repeated".to_string(),
                 mnemonic.pos, mnemonic.len()));
