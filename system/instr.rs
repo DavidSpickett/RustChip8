@@ -631,7 +631,7 @@ instr_x!(SkipKeyIfNotPressedInstr, "SKNP", InstrFlags::Keys, 0xE0A1,
 instr_x!(ReadRegsFromMemInstr, "LD", InstrFlags::_None, 0xF065,
 | c8: &mut Chip8System, vx | {
     let addr = c8.bounds_check_i(vx+1);
-    for reg_idx in 0..(vx+1) {
+    for reg_idx in 0..=vx {
         c8.v_regs[reg_idx as usize] = c8.memory[addr+(reg_idx as usize)];
     }
 }, 
@@ -640,7 +640,7 @@ instr_x!(ReadRegsFromMemInstr, "LD", InstrFlags::_None, 0xF065,
 instr_x!(WriteRegsToMemInstr, "LD", InstrFlags::_None, 0xF055,
 | c8: &mut Chip8System, vx | {
     let addr = c8.bounds_check_i(vx+1);
-    for reg_idx in 0..(vx+1) {
+    for reg_idx in 0..=vx {
         c8.memory[addr+(reg_idx as usize)] = c8.v_regs[reg_idx as usize];
     }
 },
