@@ -19,7 +19,7 @@ pub fn main() {
             \n\
             The two modes are:\n\
                 -a : assembler, where <file> is an assembly file\n\
-                -i : interpret, where <file> is a ROM file and '-s' eanbles sound\n\
+                -i : interpret, where <file> is a ROM file and '-s' enables sound\n\
             \n\
             Scaling factor multiplies the size of each Chip8 pixel. (default 1)\n\
             e.g. 2 means each block is 2x2 pixels in the final output.";
