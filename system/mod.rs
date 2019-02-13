@@ -1,5 +1,5 @@
 // Until I work out a way around Box<Instr>, impl trait is close
-#![cfg_attr(feature = "cargo-clippy", allow(borrowed_box))]
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::borrowed_box))]
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
