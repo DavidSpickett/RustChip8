@@ -1,4 +1,4 @@
-name: github_actions
+name: build_and_test
 
 on:
   push:
