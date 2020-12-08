@@ -1,5 +1,5 @@
 RustChip8 is a Rust interpreter and assembler for the Chip-8 virtual machine.
-Essentially a rewrite of my previous project PyChip8.
+Essentially a rewrite of my previous project [PyChip8](https://github.com/DavidSpickett/PyChip8).
 
 [![Build Status](https://github.com/davidspickett/rustchip8/workflows/build_and_test/badge.svg)](https://github.com/DavidSpickett/RustChip8/actions)
 
