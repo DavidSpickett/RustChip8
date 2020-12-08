@@ -1,0 +1,25 @@
+name: github_actions
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-D warnings -W unused-results'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Apt Install
+      run: sudo apt-get install libsdl2-dev
+    - name: Build
+      run: cargo build --verbose --all
+    - name: Test
+      run: cargo test --verbose --all
+    - name: Clippy
+      run: cargo clippy -- -D warnings
