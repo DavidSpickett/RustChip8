@@ -296,11 +296,11 @@ mod test {
         // First make sure they all have symbol create
         let sym = "foo".to_string();
         let instrs = [
-            Box::new(          SysInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(         JumpInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(         CallInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(        LoadIInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
-            Box::new(JumpPlusVZeroInstr::create_with_symbol(sym.to_owned())) as Box<Instr>,
+            Box::new(          SysInstr::create_with_symbol(sym.to_owned())) as Box<dyn Instr>,
+            Box::new(         JumpInstr::create_with_symbol(sym.to_owned())) as Box<dyn Instr>,
+            Box::new(         CallInstr::create_with_symbol(sym.to_owned())) as Box<dyn Instr>,
+            Box::new(        LoadIInstr::create_with_symbol(sym.to_owned())) as Box<dyn Instr>,
+            Box::new(JumpPlusVZeroInstr::create_with_symbol(sym.to_owned())) as Box<dyn Instr>,
         ];
 
         // They can all repr with the symbol name

@@ -9,7 +9,6 @@ use std::path::Path;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Read;
-use std::error::Error;
 use std::fs::OpenOptions;
 use std::io::Write;
 
@@ -122,7 +121,7 @@ pub fn main() {
 
 fn assemble_file(asm_path: &str, output_file: &str) {
     let file = match File::open(asm_path) {
-        Err(why) => panic!("Couldn't open assembly file: {}",why.description()),
+        Err(why) => panic!("Couldn't open assembly file: {}",why.to_string()),
         Ok(file) => file,
     };
 
@@ -155,7 +154,7 @@ fn assemble_file(asm_path: &str, output_file: &str) {
 
     if let Err(why) = file.write(&binary) {
         panic!("Couldn't write to output file: {}",
-        why.description())
+        why.to_string())
     }
 }
 

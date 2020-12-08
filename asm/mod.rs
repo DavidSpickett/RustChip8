@@ -18,19 +18,19 @@ impl AsmError {
 }
 
 #[cfg(test)]
-pub fn parse_asm_str(asm: &str) -> Result<Vec<Box<Instr>>, String> {
+pub fn parse_asm_str(asm: &str) -> Result<Vec<Box<dyn Instr>>, String> {
     let mut warnings: Vec<String> = vec![];
     parse_asm(asm, &"<str>".to_string(), &mut warnings)
 }
 
 #[cfg(test)]
 fn parse_asm_str_with_warnings(asm: &str, warnings: &mut Vec<String>)
-    -> Result<Vec<Box<Instr>>, String> {
+    -> Result<Vec<Box<dyn Instr>>, String> {
     parse_asm(asm, &"<str>".to_string(), warnings)
 }
 
-pub fn parse_asm(asm: &str, filename: &str, warnings: &mut Vec<String>) -> Result<Vec<Box<Instr>>, String> {
-    let mut instrs: Vec<Box<Instr>> = vec![];
+pub fn parse_asm(asm: &str, filename: &str, warnings: &mut Vec<String>) -> Result<Vec<Box<dyn Instr>>, String> {
+    let mut instrs: Vec<Box<dyn Instr>> = vec![];
     let mut symbols: HashMap<String, u16> = HashMap::new();
     let mut addr: u16 = 0x0200;
     let mut errs: Vec<AsmError> = vec![];
@@ -166,12 +166,12 @@ impl ErrInfo {
 fn parse_line(line: &str,
               symbols: &mut HashMap<String, u16>,
               current_addr: u16)
-                -> Result<Vec<Box<Instr>>, ErrInfo> {
+                -> Result<Vec<Box<dyn Instr>>, ErrInfo> {
     // This function will add new symbols to the map and return an
     // instruction object if one was required.
     // That object may have an unresolved symbol in it, parse_asm
     // will take care of that.
-    let mut instrs: Vec<Box<Instr>> = vec![];
+    let mut instrs: Vec<Box<dyn Instr>> = vec![];
 
     let comment_chars = "//";
     let mut no_comments_line = line;
@@ -424,7 +424,7 @@ fn parse_line(line: &str,
     Ok(instrs)
 }
 
-fn emit_extended_load(instrs: &mut Vec<Box<Instr>>, addr: u16) {
+fn emit_extended_load(instrs: &mut Vec<Box<dyn Instr>>, addr: u16) {
     if addr <= 0xFFF {
         instrs.push(Box::new(LoadIInstr::create(addr)));
     } else {
@@ -468,7 +468,7 @@ fn emit_extended_load(instrs: &mut Vec<Box<Instr>>, addr: u16) {
     }
 }
 
-fn handle_vx_mnemonic(instrs: &mut Vec<Box<Instr>>,
+fn handle_vx_mnemonic(instrs: &mut Vec<Box<dyn Instr>>,
                         mnemonic: &AsmArg,
                         args: &[AsmArg]) -> Result<(), ErrInfo> {
     let x = match parse_vx(&args[0]) {
@@ -487,7 +487,7 @@ fn handle_vx_mnemonic(instrs: &mut Vec<Box<Instr>>,
     Ok(())
 }
 
-fn handle_vxvy_mnemonic(instrs: &mut Vec<Box<Instr>>,
+fn handle_vxvy_mnemonic(instrs: &mut Vec<Box<dyn Instr>>,
                         mnemonic: &AsmArg,
                         args: &[AsmArg]) -> Result<(), ErrInfo> {
     let x = match parse_vx(&args[0]) {
@@ -547,7 +547,7 @@ fn check_num_args(mnemonic: &AsmArg, num: usize) -> Result<usize, ErrInfo> {
 }
 
 fn parse_vx(arg: &AsmArg) -> Result<u8, ErrInfo> {
-    let c1 = arg.s.chars().nth(0).unwrap();
+    let c1 = arg.s.chars().next().unwrap();
     if (c1 != 'V') && (c1 != 'v') {
         return Err(ErrInfo::new(
                 "VX arg does not begin with \"V\"".to_string(),

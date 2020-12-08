@@ -1,9 +1,8 @@
-// Until I work out a way around Box<Instr>, impl trait is close
+// Until I work out a way around Box<dyn Instr>, impl trait is close
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::borrowed_box))]
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use std::error::Error;
 use system::instr::*;
 use std::fs::File;
 use std::io::Read;
@@ -13,7 +12,7 @@ pub mod instr;
 
 pub fn read_rom(filename: &str) -> Vec<u8> {
     let mut file = match File::open(filename) {
-        Err(why) => panic!("couldn't open ROM: {}",why.description()),
+        Err(why) => panic!("couldn't open ROM: {}",why.to_string()),
         Ok(file) => file,
     };
 
@@ -25,7 +24,7 @@ pub fn read_rom(filename: &str) -> Vec<u8> {
     contents
 }
 
-pub fn instrs_to_rom(instrs: &[Box<Instr>]) -> Vec<u8> {
+pub fn instrs_to_rom(instrs: &[Box<dyn Instr>]) -> Vec<u8> {
     let mut rom: Vec<u8> = vec![];
     for i in instrs {
         let opc = i.get_opcode();
@@ -128,7 +127,7 @@ impl Chip8System {
 
         if let Err(why) = file.write(self.screen_to_str().as_bytes()) {
             panic!("couldn't write to screen dump!: {}",
-                why.description())
+                why.to_string())
         }
     }
 
@@ -203,75 +202,75 @@ impl Chip8System {
         format!("Unknown instruction 0x{:04X} at PC 0x{:04X}", opcode, self.pc-2)
     }
 
-    fn get_opcode_obj(&self, opcode: u16) -> Result<Box<Instr>, String> {
+    fn get_opcode_obj(&self, opcode: u16) -> Result<Box<dyn Instr>, String> {
         match opcode >> 12 {
             0x0 => {
                 match opcode & 0xFFF {
                     // Note that these first two *must* begin with 0, as in 0x00E0
-                    0x0E0 => Ok(Box::new(ClearDisplayInstr::new(opcode)) as Box<Instr>),
-                    0x0EE => Ok(Box::new(RetInstr::new(opcode))          as Box<Instr>),
+                    0x0E0 => Ok(Box::new(ClearDisplayInstr::new(opcode)) as Box<dyn Instr>),
+                    0x0EE => Ok(Box::new(RetInstr::new(opcode))          as Box<dyn Instr>),
                     0xFFF => {
                         // Special BRK instr
                         self.dump();
                         panic!(format!("BRK instruction encountered at PC 0x{:04X}", self.pc-2));
                     },
-                    _ =>    Ok(Box::new(SysInstr::new(opcode))          as Box<Instr>),
+                    _ =>    Ok(Box::new(SysInstr::new(opcode))          as Box<dyn Instr>),
                 }
             }
-            0x1 => Ok(Box::new(JumpInstr::new(opcode))         as Box<Instr>),
-            0x2 => Ok(Box::new(CallInstr::new(opcode))         as Box<Instr>),
-            0x3 => Ok(Box::new(SkipEqualInstr::new(opcode))    as Box<Instr>),
-            0x4 => Ok(Box::new(SkipNotEqualInstr::new(opcode)) as Box<Instr>),
+            0x1 => Ok(Box::new(JumpInstr::new(opcode))         as Box<dyn Instr>),
+            0x2 => Ok(Box::new(CallInstr::new(opcode))         as Box<dyn Instr>),
+            0x3 => Ok(Box::new(SkipEqualInstr::new(opcode))    as Box<dyn Instr>),
+            0x4 => Ok(Box::new(SkipNotEqualInstr::new(opcode)) as Box<dyn Instr>),
             0x5 => {
                 match opcode & 0xF {
-                    0 => Ok(Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<Instr>),
+                    0 => Ok(Box::new(SkipIfRegsEqualInstr::new(opcode)) as Box<dyn Instr>),
                     _ => Err(self.format_unknown(opcode)),
                 }
             }
-            0x6 => Ok(Box::new(LoadByteInstr::new(opcode)) as Box<Instr>),
-            0x7 => Ok(Box::new(AddByteInstr::new(opcode))  as Box<Instr>),
+            0x6 => Ok(Box::new(LoadByteInstr::new(opcode)) as Box<dyn Instr>),
+            0x7 => Ok(Box::new(AddByteInstr::new(opcode))  as Box<dyn Instr>),
             0x8 => {
                 match opcode & 0xF {
-                    0x0 => Ok(Box::new(MovRegInstr::new(opcode))  as Box<Instr>),
-                    0x1 => Ok(Box::new(OrRegInstr::new(opcode))   as Box<Instr>),
-                    0x2 => Ok(Box::new(AndRegInstr::new(opcode))  as Box<Instr>),
-                    0x3 => Ok(Box::new(XORRegInstr::new(opcode))  as Box<Instr>),
-                    0x4 => Ok(Box::new(AddRegInstr::new(opcode))  as Box<Instr>),
-                    0x5 => Ok(Box::new(SubRegInstr::new(opcode))  as Box<Instr>),
-                    0x6 => Ok(Box::new(ShrRegInstr::new(opcode))  as Box<Instr>),
-                    0x7 => Ok(Box::new(SubNRegInstr::new(opcode)) as Box<Instr>),
-                    0xE => Ok(Box::new(ShlRegInstr::new(opcode))  as Box<Instr>),
+                    0x0 => Ok(Box::new(MovRegInstr::new(opcode))  as Box<dyn Instr>),
+                    0x1 => Ok(Box::new(OrRegInstr::new(opcode))   as Box<dyn Instr>),
+                    0x2 => Ok(Box::new(AndRegInstr::new(opcode))  as Box<dyn Instr>),
+                    0x3 => Ok(Box::new(XORRegInstr::new(opcode))  as Box<dyn Instr>),
+                    0x4 => Ok(Box::new(AddRegInstr::new(opcode))  as Box<dyn Instr>),
+                    0x5 => Ok(Box::new(SubRegInstr::new(opcode))  as Box<dyn Instr>),
+                    0x6 => Ok(Box::new(ShrRegInstr::new(opcode))  as Box<dyn Instr>),
+                    0x7 => Ok(Box::new(SubNRegInstr::new(opcode)) as Box<dyn Instr>),
+                    0xE => Ok(Box::new(ShlRegInstr::new(opcode))  as Box<dyn Instr>),
                     _   => Err(self.format_unknown(opcode)),
                 }
             }
             0x9 => {
                 match opcode & 0xF {
-                    0 => Ok(Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<Instr>),
+                    0 => Ok(Box::new(SkipIfRegsNotEqualInstr::new(opcode)) as Box<dyn Instr>),
                     _ => Err(self.format_unknown(opcode)),
                 }
             }
-            0xA => Ok(Box::new(LoadIInstr::new(opcode))         as Box<Instr>),
-            0xB => Ok(Box::new(JumpPlusVZeroInstr::new(opcode)) as Box<Instr>),
-            0xC => Ok(Box::new(RandomInstr::new(opcode))        as Box<Instr>),
-            0xD => Ok(Box::new(DrawSpriteInstr::new(opcode))    as Box<Instr>),
+            0xA => Ok(Box::new(LoadIInstr::new(opcode))         as Box<dyn Instr>),
+            0xB => Ok(Box::new(JumpPlusVZeroInstr::new(opcode)) as Box<dyn Instr>),
+            0xC => Ok(Box::new(RandomInstr::new(opcode))        as Box<dyn Instr>),
+            0xD => Ok(Box::new(DrawSpriteInstr::new(opcode))    as Box<dyn Instr>),
             0xE => {
                 match opcode & 0xFF {
-                    0x9E => Ok(Box::new(SkipKeyIfPressedInstr::new(opcode))    as Box<Instr>),
-                    0xA1 => Ok(Box::new(SkipKeyIfNotPressedInstr::new(opcode)) as Box<Instr>),
+                    0x9E => Ok(Box::new(SkipKeyIfPressedInstr::new(opcode))    as Box<dyn Instr>),
+                    0xA1 => Ok(Box::new(SkipKeyIfNotPressedInstr::new(opcode)) as Box<dyn Instr>),
                     _    => Err(self.format_unknown(opcode)),
                 }
             }
             0xF => {
                 match opcode & 0xFF {
-                    0x07 => Ok(Box::new(GetDelayTimerInstr::new(opcode))   as Box<Instr>),
-                    0x0A => Ok(Box::new(WaitForKeyInstr::new(opcode))      as Box<Instr>),
-                    0x15 => Ok(Box::new(SetDelayTimerInstr::new(opcode))   as Box<Instr>),
-                    0x18 => Ok(Box::new(SetSoundTimerInstr::new(opcode))   as Box<Instr>),
-                    0x1E => Ok(Box::new(AddIVInstr::new(opcode))           as Box<Instr>),
-                    0x29 => Ok(Box::new(GetDigitAddrInstr::new(opcode))    as Box<Instr>),
-                    0x33 => Ok(Box::new(StoreBCDInstr::new(opcode))        as Box<Instr>),
-                    0x55 => Ok(Box::new(WriteRegsToMemInstr::new(opcode))  as Box<Instr>),
-                    0x65 => Ok(Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<Instr>),
+                    0x07 => Ok(Box::new(GetDelayTimerInstr::new(opcode))   as Box<dyn Instr>),
+                    0x0A => Ok(Box::new(WaitForKeyInstr::new(opcode))      as Box<dyn Instr>),
+                    0x15 => Ok(Box::new(SetDelayTimerInstr::new(opcode))   as Box<dyn Instr>),
+                    0x18 => Ok(Box::new(SetSoundTimerInstr::new(opcode))   as Box<dyn Instr>),
+                    0x1E => Ok(Box::new(AddIVInstr::new(opcode))           as Box<dyn Instr>),
+                    0x29 => Ok(Box::new(GetDigitAddrInstr::new(opcode))    as Box<dyn Instr>),
+                    0x33 => Ok(Box::new(StoreBCDInstr::new(opcode))        as Box<dyn Instr>),
+                    0x55 => Ok(Box::new(WriteRegsToMemInstr::new(opcode))  as Box<dyn Instr>),
+                    0x65 => Ok(Box::new(ReadRegsFromMemInstr::new(opcode)) as Box<dyn Instr>),
                     _    => Err(self.format_unknown(opcode)),
                 }
             }
@@ -279,7 +278,7 @@ impl Chip8System {
         }
     }
 
-    pub fn fetch_and_decode(&mut self) -> Box<Instr> {
+    pub fn fetch_and_decode(&mut self) -> Box<dyn Instr> {
         // TODO: base these on actual frequencies, not number of instructions
         unsafe {
             static DT_FUDGE_RESET: u16 = 100;
@@ -324,7 +323,7 @@ impl Chip8System {
         }
     }
 
-    pub fn execute(&mut self, instr: &Box<Instr>) {
+    pub fn execute(&mut self, instr: &Box<dyn Instr>) {
         //TODO: check that fetch and decode has been called
         instr.exec(self);
     }

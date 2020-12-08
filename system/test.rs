@@ -367,7 +367,7 @@ mod test {
 
     #[test]
     fn basic_instr_building() {
-        let mut instrs: Vec<Box<Instr>> = vec![
+        let mut instrs: Vec<Box<dyn Instr>> = vec![
             // V0 = digit = 0 already
             // V1 = x = 2
             Box::new(AddByteInstr::create(1, 2)),
@@ -449,41 +449,41 @@ mod test {
     #[test]
     fn instrs_have_create() {
         let data = [
-            (Box::new(SysInstr::create(0x736))                as Box<Instr>, "SYS 0x736"),
-            (Box::new(ClearDisplayInstr::create())            as Box<Instr>, "CLS"),
-            (Box::new(RetInstr::create())                     as Box<Instr>, "RET"),
-            (Box::new(JumpInstr::create(0x123))               as Box<Instr>, "JP 0x123"),
-            (Box::new(CallInstr::create(0x321))               as Box<Instr>, "CALL 0x321"),
-            (Box::new(SkipEqualInstr::create(9, 0x45))        as Box<Instr>, "SE V9, 0x45"),
-            (Box::new(SkipNotEqualInstr::create(3, 0x89))     as Box<Instr>, "SNE V3, 0x89"),
-            (Box::new(SkipIfRegsEqualInstr::create(1, 2))     as Box<Instr>, "SE V1, V2"),
-            (Box::new(LoadByteInstr::create(7, 0x63))         as Box<Instr>, "LD V7, 0x63"),
-            (Box::new(AddByteInstr::create(3, 0x68))          as Box<Instr>, "ADD V3, 0x68"),
-            (Box::new(MovRegInstr::create(0, 4))              as Box<Instr>, "LD V0, V4"),
-            (Box::new(OrRegInstr::create(5, 8))               as Box<Instr>, "OR V5, V8"),
-            (Box::new(AndRegInstr::create(10, 12))            as Box<Instr>, "AND V10, V12"),
-            (Box::new(XORRegInstr::create(13, 2))             as Box<Instr>, "XOR V13, V2"),
-            (Box::new(AddRegInstr::create(7, 14))             as Box<Instr>, "ADD V7, V14"),
-            (Box::new(SubRegInstr::create(6, 13))             as Box<Instr>, "SUB V6, V13"),
-            (Box::new(ShrRegInstr::create(5))                 as Box<Instr>, "SHR V5"),
-            (Box::new(SubNRegInstr::create(2, 9))             as Box<Instr>, "SUBN V2, V9"),
-            (Box::new(ShlRegInstr::create(11))                as Box<Instr>, "SHL V11"),
-            (Box::new(SkipIfRegsNotEqualInstr::create(10, 3)) as Box<Instr>, "SNE V10, V3"),
-            (Box::new(LoadIInstr::create(0x847))              as Box<Instr>, "LD I, 0x847"),
-            (Box::new(JumpPlusVZeroInstr::create(0x734))      as Box<Instr>, "JP V0, 0x734"),
-            (Box::new(RandomInstr::create(8, 0x39))           as Box<Instr>, "RND V8, 0x39"),
-            (Box::new(DrawSpriteInstr::create(5, 7, 10))      as Box<Instr>, "DRW V5, V7, 10"),
-            (Box::new(SkipKeyIfPressedInstr::create(9))       as Box<Instr>, "SKP V9"),
-            (Box::new(SkipKeyIfNotPressedInstr::create(3))    as Box<Instr>, "SKNP V3"),
-            (Box::new(GetDelayTimerInstr::create(5))          as Box<Instr>, "LD V5, DT"),
-            (Box::new(WaitForKeyInstr::create(11))            as Box<Instr>, "LD V11, K"),
-            (Box::new(SetDelayTimerInstr::create(6))          as Box<Instr>, "LD DT, V6"),
-            (Box::new(SetSoundTimerInstr::create(12))         as Box<Instr>, "LD ST, V12"),
-            (Box::new(AddIVInstr::create(7))                  as Box<Instr>, "ADD I, V7"),
-            (Box::new(GetDigitAddrInstr::create(13))          as Box<Instr>, "LD F, V13"),
-            (Box::new(StoreBCDInstr::create(6))               as Box<Instr>, "LD B, V6"),
-            (Box::new(WriteRegsToMemInstr::create(15))        as Box<Instr>, "LD [I], V15"),
-            (Box::new(ReadRegsFromMemInstr::create(2))        as Box<Instr>, "LD V2, [I]"),
+            (Box::new(SysInstr::create(0x736))                as Box<dyn Instr>, "SYS 0x736"),
+            (Box::new(ClearDisplayInstr::create())            as Box<dyn Instr>, "CLS"),
+            (Box::new(RetInstr::create())                     as Box<dyn Instr>, "RET"),
+            (Box::new(JumpInstr::create(0x123))               as Box<dyn Instr>, "JP 0x123"),
+            (Box::new(CallInstr::create(0x321))               as Box<dyn Instr>, "CALL 0x321"),
+            (Box::new(SkipEqualInstr::create(9, 0x45))        as Box<dyn Instr>, "SE V9, 0x45"),
+            (Box::new(SkipNotEqualInstr::create(3, 0x89))     as Box<dyn Instr>, "SNE V3, 0x89"),
+            (Box::new(SkipIfRegsEqualInstr::create(1, 2))     as Box<dyn Instr>, "SE V1, V2"),
+            (Box::new(LoadByteInstr::create(7, 0x63))         as Box<dyn Instr>, "LD V7, 0x63"),
+            (Box::new(AddByteInstr::create(3, 0x68))          as Box<dyn Instr>, "ADD V3, 0x68"),
+            (Box::new(MovRegInstr::create(0, 4))              as Box<dyn Instr>, "LD V0, V4"),
+            (Box::new(OrRegInstr::create(5, 8))               as Box<dyn Instr>, "OR V5, V8"),
+            (Box::new(AndRegInstr::create(10, 12))            as Box<dyn Instr>, "AND V10, V12"),
+            (Box::new(XORRegInstr::create(13, 2))             as Box<dyn Instr>, "XOR V13, V2"),
+            (Box::new(AddRegInstr::create(7, 14))             as Box<dyn Instr>, "ADD V7, V14"),
+            (Box::new(SubRegInstr::create(6, 13))             as Box<dyn Instr>, "SUB V6, V13"),
+            (Box::new(ShrRegInstr::create(5))                 as Box<dyn Instr>, "SHR V5"),
+            (Box::new(SubNRegInstr::create(2, 9))             as Box<dyn Instr>, "SUBN V2, V9"),
+            (Box::new(ShlRegInstr::create(11))                as Box<dyn Instr>, "SHL V11"),
+            (Box::new(SkipIfRegsNotEqualInstr::create(10, 3)) as Box<dyn Instr>, "SNE V10, V3"),
+            (Box::new(LoadIInstr::create(0x847))              as Box<dyn Instr>, "LD I, 0x847"),
+            (Box::new(JumpPlusVZeroInstr::create(0x734))      as Box<dyn Instr>, "JP V0, 0x734"),
+            (Box::new(RandomInstr::create(8, 0x39))           as Box<dyn Instr>, "RND V8, 0x39"),
+            (Box::new(DrawSpriteInstr::create(5, 7, 10))      as Box<dyn Instr>, "DRW V5, V7, 10"),
+            (Box::new(SkipKeyIfPressedInstr::create(9))       as Box<dyn Instr>, "SKP V9"),
+            (Box::new(SkipKeyIfNotPressedInstr::create(3))    as Box<dyn Instr>, "SKNP V3"),
+            (Box::new(GetDelayTimerInstr::create(5))          as Box<dyn Instr>, "LD V5, DT"),
+            (Box::new(WaitForKeyInstr::create(11))            as Box<dyn Instr>, "LD V11, K"),
+            (Box::new(SetDelayTimerInstr::create(6))          as Box<dyn Instr>, "LD DT, V6"),
+            (Box::new(SetSoundTimerInstr::create(12))         as Box<dyn Instr>, "LD ST, V12"),
+            (Box::new(AddIVInstr::create(7))                  as Box<dyn Instr>, "ADD I, V7"),
+            (Box::new(GetDigitAddrInstr::create(13))          as Box<dyn Instr>, "LD F, V13"),
+            (Box::new(StoreBCDInstr::create(6))               as Box<dyn Instr>, "LD B, V6"),
+            (Box::new(WriteRegsToMemInstr::create(15))        as Box<dyn Instr>, "LD [I], V15"),
+            (Box::new(ReadRegsFromMemInstr::create(2))        as Box<dyn Instr>, "LD V2, [I]"),
         ];
 
         for (ins, expected) in data.iter() {
@@ -499,7 +499,7 @@ mod test {
         let dummy: Vec<u8> = vec![];
         let mut c8 = make_system(&dummy);
 
-        let ins = Box::new(SysInstr::create_with_symbol("xyz".to_string())) as Box<Instr>;
+        let ins = Box::new(SysInstr::create_with_symbol("xyz".to_string())) as Box<dyn Instr>;
         c8.execute(&ins);
     }
 
@@ -518,7 +518,7 @@ mod test {
         }
 
         let mut data: Vec<u16> = vec![];
-        for mut bytes in &sprite_data.into_iter().chunks(2) {
+        for mut bytes in &sprite_data.iter().chunks(2) {
             data.push(((*bytes.next().unwrap() as u16) << 8) | (*bytes.next().unwrap() as u16));
         }
 
@@ -635,7 +635,7 @@ mod test {
             0xF033, // LD B, VX
         ];
 
-        'running: loop {
+        loop {
             thread_rng().shuffle(&mut valid_instrs);
             for i in valid_instrs.iter() {
                 if (exceptions.contains(&(*i & 0xF0FF)) ||
